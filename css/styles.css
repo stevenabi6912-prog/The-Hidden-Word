@@ -361,3 +361,40 @@ button:focus{outline:none; box-shadow: var(--focus)}
   padding:12px 12px;
   font: inherit;
 }
+
+
+/* Bible picker */
+.pickerGrid{
+  display:grid;
+  grid-template-columns: 90px 1fr;
+  gap:10px 12px;
+  align-items:center;
+  padding: 6px 0 12px;
+}
+.pickerLabel{font-weight:900; font-size:13px; color: var(--muted)}
+.pickerSelect,.pickerInput{
+  width:100%;
+  border:1px solid rgba(0,0,0,.14);
+  border-radius: 14px;
+  padding:10px 10px;
+  font: inherit;
+  background:#fff;
+}
+.pickerHelp{
+  margin-top:8px;
+  font-size:12px;
+  color: var(--muted);
+  background: linear-gradient(135deg, rgba(255,230,109,.18), rgba(0,212,255,.08));
+  border:1px dashed rgba(0,0,0,.15);
+  border-radius: 16px;
+  padding:10px 12px;
+}
+.pickerPreview{
+  margin-top:10px;
+  border:1px solid rgba(0,0,0,.10);
+  border-radius: 18px;
+  padding:12px 12px;
+  background:#fff;
+  font-size:14px;
+  line-height:1.4;
+}

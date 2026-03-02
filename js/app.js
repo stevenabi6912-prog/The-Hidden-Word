@@ -42,6 +42,18 @@ const els = {
   myVersesBtn: document.getElementById("myVersesBtn"),
   practiceBtn: document.getElementById("practiceBtn"),
 
+  bibleBtn: document.getElementById("bibleBtn"),
+
+  bibleModal: document.getElementById("bibleModal"),
+  closeBibleBtn: document.getElementById("closeBibleBtn"),
+  closeBibleBtn2: document.getElementById("closeBibleBtn2"),
+  bookSelect: document.getElementById("bookSelect"),
+  chapterInput: document.getElementById("chapterInput"),
+  verseInput: document.getElementById("verseInput"),
+  loadVerseBtn: document.getElementById("loadVerseBtn"),
+  bibleHelp: document.getElementById("bibleHelp"),
+  pickerPreview: document.getElementById("pickerPreview"),
+
   modalOverlay: document.getElementById("modalOverlay"),
   myVersesModal: document.getElementById("myVersesModal"),
   closeModalBtn: document.getElementById("closeModalBtn"),
@@ -57,6 +69,7 @@ const els = {
 };
 
 let VERSE_DATA = null;
+let BIBLE_INDEX = null; // optional, generated bible index
 let current = null; // game state object
 
 // ---------- Utilities ----------
@@ -184,6 +197,67 @@ function getWordTokenIndices(tokens){
   }
   return idxs;
 }
+
+
+async function tryLoadBibleIndex(){
+  // Optional file produced by tools/build script:
+  // data/bible/index.json
+  try{
+    const url = new URL("./data/bible/index.json", window.location.href);
+    const res = await fetch(url.toString(), { cache:"no-store" });
+    if (!res.ok) return null;
+    BIBLE_INDEX = await res.json();
+    return BIBLE_INDEX;
+  } catch {
+    return null;
+  }
+}
+
+function openBiblePicker(){
+  if (!els.bibleModal) return;
+  // Populate book list
+  els.bookSelect.innerHTML = "";
+  if (!BIBLE_INDEX?.books?.length){
+    // Minimal fallback list (still allows typing book name later if you extend UI)
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "Bible data not found";
+    els.bookSelect.appendChild(opt);
+    els.bookSelect.disabled = true;
+    els.loadVerseBtn.disabled = true;
+    els.bibleHelp.textContent = "Bible data files were not found. Run the build script in tools/ and deploy again.";
+  } else {
+    els.bookSelect.disabled = false;
+    els.loadVerseBtn.disabled = false;
+    for (const b of BIBLE_INDEX.books){
+      const opt = document.createElement("option");
+      opt.value = b.id;
+      opt.textContent = b.name;
+      els.bookSelect.appendChild(opt);
+    }
+    els.bibleHelp.textContent = "Pick a verse and open it in practice mode. (Does not affect streak.)";
+  }
+
+  els.chapterInput.value = 1;
+  els.verseInput.value = 1;
+  els.pickerPreview.hidden = true;
+  openModal(els.bibleModal);
+}
+
+async function loadAnyVerse(bookId, chapterNum, verseNum){
+  // Expects files like:
+  // data/bible/<bookId>/<chapter>.json
+  // Each chapter json: { "book":"Genesis", "chapter":1, "verses":[{"n":1,"t":"In the beginning ..."}, ...] }
+  const url = new URL(`./data/bible/${bookId}/${chapterNum}.json`, window.location.href);
+  const res = await fetch(url.toString(), { cache:"no-store" });
+  if (!res.ok) throw new Error(`HTTP ${res.status} loading ${url}`);
+  const chapter = await res.json();
+  const v = (chapter.verses || []).find(x => Number(x.n) === Number(verseNum));
+  if (!v) throw new Error(`Verse not found: ${bookId} ${chapterNum}:${verseNum}`);
+  const refName = BIBLE_INDEX?.books?.find(b => b.id === bookId)?.name || bookId;
+  return { ref: `${refName} ${chapterNum}:${verseNum}`, text: v.t };
+}
+
 
 // ---------- Step plan ----------
 function buildStepPlan(verse, dateKey){
@@ -727,10 +801,18 @@ function renderAll(){
 }
 
 async function loadData(){
-  const res = await fetch("./data/verses.json", { cache:"no-store" });
-  if (!res.ok) throw new Error("Could not load verses.json");
-  VERSE_DATA = await res.json();
+  // Robust path resolution for GitHub Pages (works even if the site is served from a subfolder).
+  const url = new URL("./data/verses.json", window.location.href);
+  const res = await fetch(url.toString(), { cache: "no-store" });
+  if (!res.ok) throw new Error(`HTTP ${res.status} loading ${url}`);
+  const txt = await res.text();
+  try{
+    VERSE_DATA = JSON.parse(txt);
+  } catch (e){
+    throw new Error(`Invalid JSON in ${url}: ${e.message}`);
+  }
 }
+
 
 function restoreLastModeOrDaily(){
   const todayKey = todayISO();
@@ -774,6 +856,30 @@ function wireUI(){
 
   els.practiceSearch.addEventListener("input", () => renderPracticePicker());
 
+
+  if (els.bibleBtn){
+    els.bibleBtn.addEventListener("click", openBiblePicker);
+  }
+  if (els.closeBibleBtn){
+    els.closeBibleBtn.addEventListener("click", () => closeModal(els.bibleModal));
+    els.closeBibleBtn2.addEventListener("click", () => closeModal(els.bibleModal));
+  }
+  if (els.loadVerseBtn){
+    els.loadVerseBtn.addEventListener("click", async () => {
+      try{
+        const bookId = els.bookSelect.value;
+        const chapter = Number(els.chapterInput.value);
+        const verse = Number(els.verseInput.value);
+        const v = await loadAnyVerse(bookId, chapter, verse);
+        closeModal(els.bibleModal);
+        loadPracticeVerse(v);
+      } catch (e){
+        els.bibleHelp.textContent = e.message || String(e);
+      }
+    });
+  }
+
+
   els.modalOverlay.addEventListener("click", () => {
     if (!els.myVersesModal.hidden) closeModal(els.myVersesModal);
     if (!els.practiceModal.hidden) closeModal(els.practiceModal);
@@ -792,12 +898,20 @@ function wireUI(){
 (async function(){
   try{
     await loadData();
+    await tryLoadBibleIndex();
     wireUI();
     restoreLastModeOrDaily();
   } catch (err){
     console.error(err);
     els.verseRef.textContent = "Error";
     els.verseDate.textContent = "Could not load verse data.";
-    els.verseText.textContent = "Check that data/verses.json is present and valid JSON.";
+    els.verseText.textContent =
+      "Check that data/verses.json exists next to index.html (same folder) and is valid JSON.\n" +
+      "If you're opening the file directly (file://), use a local server or GitHub Pages.";
+    // Clear UI bits so we don't show stale pills
+    els.pills.innerHTML = "";
+    els.hintBtn.disabled = true;
+    els.resetStepBtn.disabled = true;
+    els.startOverBtn.disabled = true;
   }
 })();
