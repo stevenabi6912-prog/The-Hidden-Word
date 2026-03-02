@@ -39,7 +39,9 @@ const els = {
   encourageText: document.getElementById("encourageText"),
   streakCount: document.getElementById("streakCount"),
   modeBadge: document.getElementById("modeBadge"),
+  homeBtn: document.getElementById("homeBtn"),
   myVersesBtn: document.getElementById("myVersesBtn"),
+  myVersesList: document.getElementById("myVersesList"),
   practiceBtn: document.getElementById("practiceBtn"),
 
   modalOverlay: document.getElementById("modalOverlay"),
@@ -53,9 +55,11 @@ const els = {
   // Home / picker views
   homeView: document.getElementById("homeView"),
   pickView: document.getElementById("pickView"),
+  versesView: document.getElementById("versesView"),
   goDailyBtn: document.getElementById("goDailyBtn"),
   goPickBtn: document.getElementById("goPickBtn"),
   backHomeBtn: document.getElementById("backHomeBtn"),
+  backHomeBtn2: document.getElementById("backHomeBtn2"),
   streakCountHome: document.getElementById("streakCountHome"),
   completedCountHome: document.getElementById("completedCountHome"),
   homeTodayRef: document.getElementById("homeTodayRef"),
@@ -564,18 +568,6 @@ function startOver(){
 }
 
 // ---------- Completed list / Modals ----------
-function openModal(modalEl){
-  els.modalOverlay.hidden = false;
-  modalEl.hidden = false;
-  document.body.style.overflow = "hidden";
-}
-function closeModal(modalEl){
-  modalEl.hidden = true;
-  // If no other modal open, hide overlay
-  const anyOpen = !els.myVersesModal.hidden || !els.practiceModal.hidden;
-  if (!anyOpen) els.modalOverlay.hidden = true;
-  document.body.style.overflow = "";
-}
 
 function renderCompletedList(){
   const completed = loadLS(LS.completed, []);
@@ -624,9 +616,9 @@ function renderCompletedList(){
 }
 
 function openMyVerses(){
-  renderCompletedList();
-  openModal(els.myVersesModal);
+  showVerses();
 }
+
 
 function buildPracticeList(filterText=""){
   const q = filterText.trim().toLowerCase();
@@ -676,6 +668,7 @@ function renderPracticePicker(){
 function openPracticePicker(){
   showPicker();
 }
+
 
 
 
@@ -734,6 +727,39 @@ function showHome(){
   els.modeBadge.textContent = "Home";
   renderHomeStats();
   renderHomeTodayPreview();
+}
+
+function showVerses(){
+  const hero = document.querySelector(".hero");
+  if (hero) hero.style.display = "none";
+  if (els.homeView) els.homeView.hidden = true;
+  if (els.pickView) els.pickView.hidden = true;
+  if (els.versesView) els.versesView.hidden = false;
+  els.modeBadge.textContent = "My Verses";
+  renderMyVersesInline();
+}
+
+function renderMyVersesInline(){
+  const completed = loadLS(LS.completed, []);
+  const items = Array.isArray(completed) ? completed : [];
+  if (!els.myVersesList) return;
+  if (!items.length){
+    els.myVersesList.innerHTML = `<div class="empty">No completed verses yet. Finish a verse and it will show up here.</div>`;
+    return;
+  }
+  els.myVersesList.innerHTML = items.slice().reverse().map(v => (
+    `<button class="verseItem" type="button" data-ref="${escapeHTML(v.ref)}">
+      <div class="vref">${escapeHTML(v.ref)}</div>
+      <div class="vtext">${escapeHTML(v.text)}</div>
+    </button>`
+  )).join("");
+  els.myVersesList.querySelectorAll(".verseItem").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const ref = btn.getAttribute("data-ref");
+      const found = items.find(x => x.ref === ref);
+      if (found) loadPracticeVerse(found);
+    });
+  });
 }
 
 function showPicker(){
@@ -813,12 +839,14 @@ function restoreLastModeOrDaily(){
 
 
 
+
 function wireUI(){
   els.hintBtn.addEventListener("click", onHint);
   els.resetStepBtn.addEventListener("click", resetStep);
   els.startOverBtn.addEventListener("click", startOver);
 
   els.myVersesBtn.addEventListener("click", openMyVerses);
+  els.homeBtn?.addEventListener("click", () => showHome());
 
   els.goDailyBtn?.addEventListener("click", () => {
     const todayKey = todayISO();
