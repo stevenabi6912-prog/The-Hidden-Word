@@ -1,19 +1,20 @@
 # The Hidden Word (KJV)
 
-Now includes an **optional** “Pick any verse” Bible picker.
+A gentle daily Bible memory tool.
 
-## Daily verses
-Daily verses come from `data/verses.json`.
+"Thy word have I hid in mine heart." — Psalm 119:11 (KJV)
 
-## Pick any verse
-The Bible picker expects generated data files at:
+Features:
+- One verse per day (automatic rotation)
+- Words disappear step-by-step until the whole verse is recalled
+- Hint button reveals the next word (no competition, no penalties)
+- Completed verse list (stored locally)
+- Daily streak counter (encouraging, not competitive)
 
-- `data/bible/index.json`
-- `data/bible/<bookId>/<chapter>.json`
+## Host on GitHub Pages
+1. Upload these files to a new repository.
+2. Go to Settings → Pages
+3. Deploy from branch → main → /root
 
-### Build the Bible data
-This repo includes helper scripts in `tools/` to generate those files.
-
-> Note: many Bible websites block automated scraping (Cloudflare/CORS). If the source blocks requests, use another public-domain KJV text source to generate the files, then deploy.
-
-See `tools/README-tools.md`.
+## Add verses
+Edit data/verses.json

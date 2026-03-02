@@ -41,18 +41,11 @@ const els = {
   modeBadge: document.getElementById("modeBadge"),
   myVersesBtn: document.getElementById("myVersesBtn"),
   practiceBtn: document.getElementById("practiceBtn"),
-
-  bibleBtn: document.getElementById("bibleBtn"),
-
-  bibleModal: document.getElementById("bibleModal"),
-  closeBibleBtn: document.getElementById("closeBibleBtn"),
-  closeBibleBtn2: document.getElementById("closeBibleBtn2"),
-  bookSelect: document.getElementById("bookSelect"),
-  chapterInput: document.getElementById("chapterInput"),
-  verseInput: document.getElementById("verseInput"),
-  loadVerseBtn: document.getElementById("loadVerseBtn"),
-  bibleHelp: document.getElementById("bibleHelp"),
-  pickerPreview: document.getElementById("pickerPreview"),
+  homeBtn: document.getElementById("homeBtn"),
+  homeScreen: document.getElementById("homeScreen"),
+  goDailyBtn: document.getElementById("goDailyBtn"),
+  goPickBtn: document.getElementById("goPickBtn"),
+  homeStreakValue: document.getElementById("homeStreakValue"),
 
   modalOverlay: document.getElementById("modalOverlay"),
   myVersesModal: document.getElementById("myVersesModal"),
@@ -69,7 +62,6 @@ const els = {
 };
 
 let VERSE_DATA = null;
-let BIBLE_INDEX = null; // optional, generated bible index
 let current = null; // game state object
 
 // ---------- Utilities ----------
@@ -130,12 +122,7 @@ function choice(arr, rnd){
 }
 
 function safeJSONParse(s, fallback){
-  try{
-    const v = JSON.parse(s);
-    return (v === null || v === undefined) ? fallback : v;
-  } catch {
-    return fallback;
-  }
+  try{ return JSON.parse(s); } catch { return fallback; }
 }
 
 function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
@@ -202,67 +189,6 @@ function getWordTokenIndices(tokens){
   }
   return idxs;
 }
-
-
-async function tryLoadBibleIndex(){
-  // Optional file produced by tools/build script:
-  // data/bible/index.json
-  try{
-    const url = new URL("./data/bible/index.json", window.location.href);
-    const res = await fetch(url.toString(), { cache:"no-store" });
-    if (!res.ok) return null;
-    BIBLE_INDEX = await res.json();
-    return BIBLE_INDEX;
-  } catch {
-    return null;
-  }
-}
-
-function openBiblePicker(){
-  if (!els.bibleModal) return;
-  // Populate book list
-  els.bookSelect.innerHTML = "";
-  if (!BIBLE_INDEX?.books?.length){
-    // Minimal fallback list (still allows typing book name later if you extend UI)
-    const opt = document.createElement("option");
-    opt.value = "";
-    opt.textContent = "Bible data not found";
-    els.bookSelect.appendChild(opt);
-    els.bookSelect.disabled = true;
-    els.loadVerseBtn.disabled = true;
-    els.bibleHelp.textContent = "Bible data files were not found. Run the build script in tools/ and deploy again.";
-  } else {
-    els.bookSelect.disabled = false;
-    els.loadVerseBtn.disabled = false;
-    for (const b of BIBLE_INDEX.books){
-      const opt = document.createElement("option");
-      opt.value = b.id;
-      opt.textContent = b.name;
-      els.bookSelect.appendChild(opt);
-    }
-    els.bibleHelp.textContent = "Pick a verse and open it in practice mode. (Does not affect streak.)";
-  }
-
-  els.chapterInput.value = 1;
-  els.verseInput.value = 1;
-  els.pickerPreview.hidden = true;
-  openModal(els.bibleModal);
-}
-
-async function loadAnyVerse(bookId, chapterNum, verseNum){
-  // Expects files like:
-  // data/bible/<bookId>/<chapter>.json
-  // Each chapter json: { "book":"Genesis", "chapter":1, "verses":[{"n":1,"t":"In the beginning ..."}, ...] }
-  const url = new URL(`./data/bible/${bookId}/${chapterNum}.json`, window.location.href);
-  const res = await fetch(url.toString(), { cache:"no-store" });
-  if (!res.ok) throw new Error(`HTTP ${res.status} loading ${url}`);
-  const chapter = await res.json();
-  const v = (chapter.verses || []).find(x => Number(x.n) === Number(verseNum));
-  if (!v) throw new Error(`Verse not found: ${bookId} ${chapterNum}:${verseNum}`);
-  const refName = BIBLE_INDEX?.books?.find(b => b.id === bookId)?.name || bookId;
-  return { ref: `${refName} ${chapterNum}:${verseNum}`, text: v.t };
-}
-
 
 // ---------- Step plan ----------
 function buildStepPlan(verse, dateKey){
@@ -806,7 +732,7 @@ function renderAll(){
 }
 
 async function loadData(){
-  // Robust path resolution for GitHub Pages subfolders.
+  // Robust path resolution for GitHub Pages (works even if the site is served from a subfolder).
   const url = new URL("./data/verses.json", window.location.href);
   const res = await fetch(url.toString(), { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status} loading ${url}`);
@@ -861,33 +787,7 @@ function wireUI(){
 
   els.practiceSearch.addEventListener("input", () => renderPracticePicker());
 
-
-  if (els.bibleBtn){
-    els.bibleBtn.addEventListener("click", openBiblePicker);
-  }
-  if (els.closeBibleBtn){
-    els.closeBibleBtn.addEventListener("click", () => closeModal(els.bibleModal));
-    els.closeBibleBtn2.addEventListener("click", () => closeModal(els.bibleModal));
-  }
-  if (els.loadVerseBtn){
-    els.loadVerseBtn.addEventListener("click", async () => {
-      try{
-        const bookId = els.bookSelect.value;
-        if (!bookId) throw new Error('Bible data not found yet. Generate data/bible files and redeploy.');
-        const chapter = Number(els.chapterInput.value);
-        const verse = Number(els.verseInput.value);
-        const v = await loadAnyVerse(bookId, chapter, verse);
-        closeModal(els.bibleModal);
-        loadPracticeVerse(v);
-      } catch (e){
-        els.bibleHelp.textContent = e.message || String(e);
-      }
-    });
-  }
-
-
   els.modalOverlay.addEventListener("click", () => {
-    if (els.bibleModal && !els.bibleModal.hidden) closeModal(els.bibleModal);
     if (!els.myVersesModal.hidden) closeModal(els.myVersesModal);
     if (!els.practiceModal.hidden) closeModal(els.practiceModal);
   });
@@ -895,7 +795,6 @@ function wireUI(){
   // Allow ESC to close modals
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape"){
-      if (els.bibleModal && !els.bibleModal.hidden) closeModal(els.bibleModal);
       if (!els.myVersesModal.hidden) closeModal(els.myVersesModal);
       if (!els.practiceModal.hidden) closeModal(els.practiceModal);
     }
@@ -906,9 +805,9 @@ function wireUI(){
 (async function(){
   try{
     await loadData();
-    await tryLoadBibleIndex();
     wireUI();
     restoreLastModeOrDaily();
+    showHome();
   } catch (err){
     console.error(err);
     els.verseRef.textContent = "Error";
@@ -923,3 +822,42 @@ function wireUI(){
     els.startOverBtn.disabled = true;
   }
 })();
+let CURRENT_VIEW = "home"; // home | game | library
+
+function showHome(){
+  CURRENT_VIEW = "home";
+  els.homeScreen.hidden = false;
+  els.verseCard.hidden = true;
+  els.controlsCard.hidden = true;
+  els.progressCard.hidden = true;
+  els.libraryModal.hidden = true;
+  // update home streak display
+  const s = readStreakSafe();
+  els.homeStreakValue.textContent = `${s.currentStreak} day${s.currentStreak===1?"":"s"}`;
+}
+
+function showGame(){
+  CURRENT_VIEW = "game";
+  els.homeScreen.hidden = true;
+  els.verseCard.hidden = false;
+  els.controlsCard.hidden = false;
+  els.progressCard.hidden = false;
+}
+
+function readStreakSafe(){
+  // Defend against bad localStorage values (null / corrupt)
+  try{
+    const raw = localStorage.getItem(STREAK_KEY);
+    if (!raw) return { currentStreak: 0, lastCompletedDate: null };
+    const s = JSON.parse(raw);
+    if (!s || typeof s !== "object") return { currentStreak: 0, lastCompletedDate: null };
+    return {
+      currentStreak: Number.isFinite(Number(s.currentStreak)) ? Number(s.currentStreak) : 0,
+      lastCompletedDate: s.lastCompletedDate || null
+    };
+  } catch {
+    return { currentStreak: 0, lastCompletedDate: null };
+  }
+}
+
+

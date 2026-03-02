@@ -363,38 +363,47 @@ button:focus{outline:none; box-shadow: var(--focus)}
 }
 
 
-/* Bible picker */
-.pickerGrid{
+/* Home screen */
+.homeTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+}
+.homeTitle{
+  margin:0;
+  font-size:22px;
+  font-weight:1000;
+  letter-spacing:-.02em;
+}
+.homeSub{
+  margin-top:6px;
+  color:var(--muted);
+  font-weight:700;
+}
+.homeButtons{
   display:grid;
-  grid-template-columns: 90px 1fr;
-  gap:10px 12px;
-  align-items:center;
-  padding: 6px 0 12px;
+  grid-template-columns: 1fr 1fr;
+  gap:12px;
+  margin-top:16px;
 }
-.pickerLabel{font-weight:900; font-size:13px; color: var(--muted)}
-.pickerSelect,.pickerInput{
-  width:100%;
-  border:1px solid rgba(0,0,0,.14);
-  border-radius: 14px;
-  padding:10px 10px;
-  font: inherit;
-  background:#fff;
+.bigBtn{
+  border: 0;
+  border-radius: 22px;
+  padding: 16px 16px;
+  cursor:pointer;
+  text-align:left;
+  color:#0b0f14;
+  background: linear-gradient(135deg, rgba(135, 94, 255, .16), rgba(0, 212, 255, .12));
+  box-shadow: 0 10px 24px rgba(0,0,0,.10);
+  transition: transform .12s ease, box-shadow .12s ease;
 }
-.pickerHelp{
-  margin-top:8px;
-  font-size:12px;
-  color: var(--muted);
-  background: linear-gradient(135deg, rgba(255,230,109,.18), rgba(0,212,255,.08));
-  border:1px dashed rgba(0,0,0,.15);
-  border-radius: 16px;
-  padding:10px 12px;
-}
-.pickerPreview{
-  margin-top:10px;
-  border:1px solid rgba(0,0,0,.10);
-  border-radius: 18px;
-  padding:12px 12px;
-  background:#fff;
-  font-size:14px;
-  line-height:1.4;
+.bigBtn:hover{ transform: translateY(-1px); box-shadow: 0 14px 30px rgba(0,0,0,.12);}
+.bigBtn:active{ transform: translateY(0px) scale(.99); }
+.bigBtnTitle{ font-weight:1000; font-size:16px; }
+.bigBtnSub{ margin-top:4px; font-size:13px; color: var(--muted); font-weight:800; }
+.homeHint{ margin-top:14px; font-size:13px; color: var(--muted); font-weight:700; }
+
+@media (max-width: 720px){
+  .homeButtons{ grid-template-columns: 1fr; }
 }

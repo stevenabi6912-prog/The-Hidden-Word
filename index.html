@@ -66,7 +66,6 @@
           “Thy word have I hid in mine heart.” — Psalm 119:11 • Slow and steady is the secret superpower. 🙂
         </div>
         <button class="ghostBtn" id="practiceBtn" type="button">Practice another verse</button>
-        <button class="ghostBtn" id="bibleBtn" type="button">Pick any verse</button>
       </div>
     </section>
   </main>
@@ -114,42 +113,6 @@
 
     <div class="modalFooter">
       <button class="softBtn" id="closePracticeBtn2" type="button">Close</button>
-    </div>
-  </div>
-
-  
-  <!-- Bible picker modal -->
-  <div class="modal" id="bibleModal" role="dialog" aria-modal="true" aria-labelledby="bibleTitle" hidden>
-    <div class="modalHeader">
-      <div>
-        <div class="modalTitle" id="bibleTitle">Pick any verse</div>
-        <div class="modalSub">Choose a book, chapter, and verse. (Requires Bible data files in this site.)</div>
-      </div>
-      <button class="closeBtn" id="closeBibleBtn" type="button" aria-label="Close">✕</button>
-    </div>
-
-    <div class="modalBody">
-      <div class="pickerGrid">
-        <label class="pickerLabel">Book</label>
-        <select class="pickerSelect" id="bookSelect"></select>
-
-        <label class="pickerLabel">Chapter</label>
-        <input class="pickerInput" id="chapterInput" type="number" min="1" value="1" />
-
-        <label class="pickerLabel">Verse</label>
-        <input class="pickerInput" id="verseInput" type="number" min="1" value="1" />
-      </div>
-
-      <div class="pickerHelp" id="bibleHelp">
-        If you haven't generated Bible data yet, run the build script in <code>tools/</code> and deploy again.
-      </div>
-
-      <div class="pickerPreview" id="pickerPreview" hidden></div>
-    </div>
-
-    <div class="modalFooter">
-      <button class="softBtn" id="loadVerseBtn" type="button">Open verse</button>
-      <button class="softBtn" id="closeBibleBtn2" type="button">Close</button>
     </div>
   </div>
 
