@@ -41,11 +41,6 @@ const els = {
   modeBadge: document.getElementById("modeBadge"),
   myVersesBtn: document.getElementById("myVersesBtn"),
   practiceBtn: document.getElementById("practiceBtn"),
-  homeBtn: document.getElementById("homeBtn"),
-  homeScreen: document.getElementById("homeScreen"),
-  goDailyBtn: document.getElementById("goDailyBtn"),
-  goPickBtn: document.getElementById("goPickBtn"),
-  homeStreakValue: document.getElementById("homeStreakValue"),
 
   modalOverlay: document.getElementById("modalOverlay"),
   myVersesModal: document.getElementById("myVersesModal"),
@@ -122,11 +117,20 @@ function choice(arr, rnd){
 }
 
 function safeJSONParse(s, fallback){
-  try{ return JSON.parse(s); } catch { return fallback; }
+  try{
+    if (s === null || s === undefined) return fallback;
+    const v = JSON.parse(s);
+    return (v === null || v === undefined) ? fallback : v;
+  } catch {
+    return fallback;
+  }
 }
 
 function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
-function loadLS(key, fallback){ return safeJSONParse(localStorage.getItem(key), fallback); }
+function loadLS(key, fallback){
+  const v = safeJSONParse(localStorage.getItem(key), fallback);
+  return (v === null || v === undefined) ? fallback : v;
+}
 
 // ---------- Verse tokenization & rendering ----------
 function tokenize(text){
@@ -732,9 +736,8 @@ function renderAll(){
 }
 
 async function loadData(){
-  // Robust path resolution for GitHub Pages (works even if the site is served from a subfolder).
   const url = new URL("./data/verses.json", window.location.href);
-  const res = await fetch(url.toString(), { cache: "no-store" });
+  const res = await fetch(url.toString(), { cache:"no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status} loading ${url}`);
   const txt = await res.text();
   try{
@@ -747,26 +750,9 @@ async function loadData(){
 
 function restoreLastModeOrDaily(){
   const todayKey = todayISO();
-
-  const last = loadLS(LS.lastMode, null);
-
-  if (last?.mode === "practice" && last.verseId && last.verseText){
-    // restore practice (best effort)
-    const v = { ref:last.verseId, text:last.verseText };
-    current = initStateForVerse(v, `practice-${todayKey}`, "practice");
-    current = loadProgressFor(current);
-    renderAll();
-    setEncouragement();
-    return;
-  }
-
-  // Daily
   const { verse } = getDailyVerse(todayKey);
   current = initStateForVerse(verse, todayKey, "daily");
   current = loadProgressFor(current);
-
-  // If they already completed today (and progress says complete), update streak display (already counted when completed),
-  // just render.
   saveLS(LS.lastMode, { mode:"daily" });
   renderAll();
   setEncouragement();
@@ -807,7 +793,6 @@ function wireUI(){
     await loadData();
     wireUI();
     restoreLastModeOrDaily();
-    showHome();
   } catch (err){
     console.error(err);
     els.verseRef.textContent = "Error";
@@ -817,47 +802,9 @@ function wireUI(){
       "If you're opening the file directly (file://), use a local server or GitHub Pages.";
     // Clear UI bits so we don't show stale pills
     els.pills.innerHTML = "";
+    // Keep navigation usable even if verse data fails to load
     els.hintBtn.disabled = true;
     els.resetStepBtn.disabled = true;
     els.startOverBtn.disabled = true;
   }
 })();
-let CURRENT_VIEW = "home"; // home | game | library
-
-function showHome(){
-  CURRENT_VIEW = "home";
-  els.homeScreen.hidden = false;
-  els.verseCard.hidden = true;
-  els.controlsCard.hidden = true;
-  els.progressCard.hidden = true;
-  els.libraryModal.hidden = true;
-  // update home streak display
-  const s = readStreakSafe();
-  els.homeStreakValue.textContent = `${s.currentStreak} day${s.currentStreak===1?"":"s"}`;
-}
-
-function showGame(){
-  CURRENT_VIEW = "game";
-  els.homeScreen.hidden = true;
-  els.verseCard.hidden = false;
-  els.controlsCard.hidden = false;
-  els.progressCard.hidden = false;
-}
-
-function readStreakSafe(){
-  // Defend against bad localStorage values (null / corrupt)
-  try{
-    const raw = localStorage.getItem(STREAK_KEY);
-    if (!raw) return { currentStreak: 0, lastCompletedDate: null };
-    const s = JSON.parse(raw);
-    if (!s || typeof s !== "object") return { currentStreak: 0, lastCompletedDate: null };
-    return {
-      currentStreak: Number.isFinite(Number(s.currentStreak)) ? Number(s.currentStreak) : 0,
-      lastCompletedDate: s.lastCompletedDate || null
-    };
-  } catch {
-    return { currentStreak: 0, lastCompletedDate: null };
-  }
-}
-
-
