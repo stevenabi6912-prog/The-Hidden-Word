@@ -49,7 +49,6 @@ const els = {
   completedList: document.getElementById("completedList"),
   emptyState: document.getElementById("emptyState"),
 
-  practiceModal: document.getElementById("practiceModal"),
   practiceList: document.getElementById("practiceList"),
   // Home / picker views
   homeView: document.getElementById("homeView"),
@@ -62,9 +61,7 @@ const els = {
   homeTodayRef: document.getElementById("homeTodayRef"),
   homeTodayText: document.getElementById("homeTodayText"),
   practiceSearch: document.getElementById("practiceSearch"),
-  closePracticeBtn: document.getElementById("closePracticeBtn"),
-  closePracticeBtn2: document.getElementById("closePracticeBtn2"),
-};
+  };
 
 let VERSE_DATA = null;
 let current = null; // game state object
@@ -681,6 +678,7 @@ function openPracticePicker(){
 }
 
 
+
 function loadPracticeVerse(verse){
   const dateKey = `practice-${todayISO()}`; // stable enough for plan seed; not used for streak
   current = initStateForVerse(verse, dateKey, "practice");
@@ -814,6 +812,7 @@ function restoreLastModeOrDaily(){
 }
 
 
+
 function wireUI(){
   els.hintBtn.addEventListener("click", onHint);
   els.resetStepBtn.addEventListener("click", resetStep);
@@ -846,15 +845,13 @@ function wireUI(){
 
   els.modalOverlay.addEventListener("click", () => {
     if (!els.myVersesModal.hidden) closeModal(els.myVersesModal);
-    if (!els.practiceModal.hidden) closeModal(els.practiceModal);
-  });
+    });
 
   // Allow ESC to close modals
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape"){
       if (!els.myVersesModal.hidden) closeModal(els.myVersesModal);
-      if (!els.practiceModal.hidden) closeModal(els.practiceModal);
-    }
+      }
   });
 }
 
