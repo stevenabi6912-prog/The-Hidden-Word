@@ -130,7 +130,12 @@ function choice(arr, rnd){
 }
 
 function safeJSONParse(s, fallback){
-  try{ return JSON.parse(s); } catch { return fallback; }
+  try{
+    const v = JSON.parse(s);
+    return (v === null || v === undefined) ? fallback : v;
+  } catch {
+    return fallback;
+  }
 }
 
 function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
@@ -801,7 +806,7 @@ function renderAll(){
 }
 
 async function loadData(){
-  // Robust path resolution for GitHub Pages (works even if the site is served from a subfolder).
+  // Robust path resolution for GitHub Pages subfolders.
   const url = new URL("./data/verses.json", window.location.href);
   const res = await fetch(url.toString(), { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status} loading ${url}`);
@@ -868,6 +873,7 @@ function wireUI(){
     els.loadVerseBtn.addEventListener("click", async () => {
       try{
         const bookId = els.bookSelect.value;
+        if (!bookId) throw new Error('Bible data not found yet. Generate data/bible files and redeploy.');
         const chapter = Number(els.chapterInput.value);
         const verse = Number(els.verseInput.value);
         const v = await loadAnyVerse(bookId, chapter, verse);
@@ -881,6 +887,7 @@ function wireUI(){
 
 
   els.modalOverlay.addEventListener("click", () => {
+    if (els.bibleModal && !els.bibleModal.hidden) closeModal(els.bibleModal);
     if (!els.myVersesModal.hidden) closeModal(els.myVersesModal);
     if (!els.practiceModal.hidden) closeModal(els.practiceModal);
   });
@@ -888,6 +895,7 @@ function wireUI(){
   // Allow ESC to close modals
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape"){
+      if (els.bibleModal && !els.bibleModal.hidden) closeModal(els.bibleModal);
       if (!els.myVersesModal.hidden) closeModal(els.myVersesModal);
       if (!els.practiceModal.hidden) closeModal(els.practiceModal);
     }
