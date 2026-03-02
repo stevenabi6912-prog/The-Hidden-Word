@@ -51,6 +51,16 @@ const els = {
 
   practiceModal: document.getElementById("practiceModal"),
   practiceList: document.getElementById("practiceList"),
+  // Home / picker views
+  homeView: document.getElementById("homeView"),
+  pickView: document.getElementById("pickView"),
+  goDailyBtn: document.getElementById("goDailyBtn"),
+  goPickBtn: document.getElementById("goPickBtn"),
+  backHomeBtn: document.getElementById("backHomeBtn"),
+  streakCountHome: document.getElementById("streakCountHome"),
+  completedCountHome: document.getElementById("completedCountHome"),
+  homeTodayRef: document.getElementById("homeTodayRef"),
+  homeTodayText: document.getElementById("homeTodayText"),
   practiceSearch: document.getElementById("practiceSearch"),
   closePracticeBtn: document.getElementById("closePracticeBtn"),
   closePracticeBtn2: document.getElementById("closePracticeBtn2"),
@@ -297,7 +307,11 @@ function getDailyVerse(todayKey){
 
 // ---------- Rendering ----------
 function setModeBadge(){
-  els.modeBadge.textContent = current.mode === "daily" ? "Daily" : "Practice";
+  if (!current){
+    els.modeBadge.textContent = "Home";
+    return;
+  }
+  els.modeBadge.textContent = (current.mode === "daily") ? "Daily" : "Pick";
 }
 
 function renderVerse(){
@@ -663,11 +677,9 @@ function renderPracticePicker(){
 }
 
 function openPracticePicker(){
-  els.practiceSearch.value = "";
-  renderPracticePicker();
-  openModal(els.practiceModal);
-  els.practiceSearch.focus();
+  showPicker();
 }
+
 
 function loadPracticeVerse(verse){
   const dateKey = `practice-${todayISO()}`; // stable enough for plan seed; not used for streak
@@ -714,8 +726,56 @@ function renderStreak(){
   els.streakCount.textContent = String(s.currentStreak || 0);
 }
 
+
+function showHome(){
+  // Hide the game hero and show home
+  const hero = document.querySelector(".hero");
+  if (hero) hero.style.display = "none";
+  if (els.pickView) els.pickView.hidden = true;
+  if (els.homeView) els.homeView.hidden = false;
+  els.modeBadge.textContent = "Home";
+  renderHomeStats();
+  renderHomeTodayPreview();
+}
+
+function showPicker(){
+  const hero = document.querySelector(".hero");
+  if (hero) hero.style.display = "none";
+  if (els.homeView) els.homeView.hidden = true;
+  if (els.pickView) els.pickView.hidden = false;
+  els.modeBadge.textContent = "Pick";
+  renderPracticePicker();
+}
+
+function showGame(){
+  const hero = document.querySelector(".hero");
+  if (hero) hero.style.display = "";
+  if (els.homeView) els.homeView.hidden = true;
+  if (els.pickView) els.pickView.hidden = true;
+}
+
+function renderHomeStats(){
+  const s = loadLS(LS.streak, { currentStreak:0, lastCompletedDate:null });
+  const cs = (s && typeof s === "object" && Number.isFinite(Number(s.currentStreak))) ? Number(s.currentStreak) : 0;
+  if (els.streakCountHome) els.streakCountHome.textContent = String(cs);
+
+  const completed = loadLS(LS.completed, []);
+  const count = Array.isArray(completed) ? completed.length : 0;
+  if (els.completedCountHome) els.completedCountHome.textContent = String(count);
+}
+
+function renderHomeTodayPreview(){
+  if (!VERSE_DATA) return;
+  const todayKey = todayISO();
+  const { verse } = getDailyVerse(todayKey);
+  if (els.homeTodayRef) els.homeTodayRef.textContent = verse.ref;
+  if (els.homeTodayText) els.homeTodayText.textContent = verse.text;
+}
+
+
 // ---------- Main render ----------
 function renderAll(){
+  showGame();
   setModeBadge();
   els.verseRef.textContent = current.verse.ref;
 
@@ -749,14 +809,10 @@ async function loadData(){
 
 
 function restoreLastModeOrDaily(){
-  const todayKey = todayISO();
-  const { verse } = getDailyVerse(todayKey);
-  current = initStateForVerse(verse, todayKey, "daily");
-  current = loadProgressFor(current);
-  saveLS(LS.lastMode, { mode:"daily" });
-  renderAll();
-  setEncouragement();
+  current = null;
+  showHome();
 }
+
 
 function wireUI(){
   els.hintBtn.addEventListener("click", onHint);
@@ -764,13 +820,28 @@ function wireUI(){
   els.startOverBtn.addEventListener("click", startOver);
 
   els.myVersesBtn.addEventListener("click", openMyVerses);
+
+  els.goDailyBtn?.addEventListener("click", () => {
+    const todayKey = todayISO();
+    const { verse } = getDailyVerse(todayKey);
+    current = initStateForVerse(verse, todayKey, "daily");
+    current = loadProgressFor(current);
+    saveLS(LS.lastMode, { mode:"daily" });
+    renderAll();
+    setEncouragement();
+  });
+
+  els.goPickBtn?.addEventListener("click", () => {
+    showPicker();
+  });
+
+  els.backHomeBtn?.addEventListener("click", () => {
+    showHome();
+  });
   els.closeModalBtn.addEventListener("click", () => closeModal(els.myVersesModal));
   els.closeModalBtn2.addEventListener("click", () => closeModal(els.myVersesModal));
 
-  els.practiceBtn.addEventListener("click", openPracticePicker);
-  els.closePracticeBtn.addEventListener("click", () => closeModal(els.practiceModal));
-  els.closePracticeBtn2.addEventListener("click", () => closeModal(els.practiceModal));
-
+  els.practiceBtn?.addEventListener("click", openPracticePicker);
   els.practiceSearch.addEventListener("input", () => renderPracticePicker());
 
   els.modalOverlay.addEventListener("click", () => {

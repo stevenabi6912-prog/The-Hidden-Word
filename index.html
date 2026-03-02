@@ -20,12 +20,65 @@
     </div>
 
     <div class="rightBits">
-      <div class="pillBadge" id="modeBadge">Daily</div>
+      <div class="pillBadge" id="modeBadge">Home</div>
       <button class="ghostBtn" id="myVersesBtn" type="button">My Verses</button>
     </div>
   </header>
 
   <main class="wrap">
+
+  <section class="card home" id="homeView">
+    <div class="homeGrid">
+      <div class="homeLeft">
+        <div class="homeTitle">The Hidden Word</div>
+        <div class="homeSub">Pick today’s verse, or choose any verse to practice. No competition — just steady growth.</div>
+
+        <div class="homeStats">
+          <div class="statCard">
+            <div class="statLabel">Streak</div>
+            <div class="statValue"><span id="streakCountHome">0</span> days</div>
+          </div>
+          <div class="statCard">
+            <div class="statLabel">Completed</div>
+            <div class="statValue"><span id="completedCountHome">0</span></div>
+          </div>
+        </div>
+
+        <div class="homeBtns">
+          <button class="primaryBtn" id="goDailyBtn" type="button">Daily verse</button>
+          <button class="softBtn" id="goPickBtn" type="button">Pick your own</button>
+        </div>
+
+        <div class="homeHint">Tip: Use “Hint” when you’re stuck — the goal is learning, not racing.</div>
+      </div>
+
+      <div class="homeRight">
+        <div class="homePreviewTitle">Today’s verse</div>
+        <div class="homePreviewRef" id="homeTodayRef">—</div>
+        <div class="homePreviewText" id="homeTodayText">—</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card picker" id="pickView" hidden>
+    <div class="pickerHeader">
+      <div>
+        <div class="modalTitle">Pick your own</div>
+        <div class="modalSub">Search your memory verse library (practice doesn’t affect streak).</div>
+      </div>
+      <div class="rowBtns">
+        <button class="smallBtn" id="backHomeBtn" type="button">Back</button>
+      </div>
+    </div>
+    <div class="pickerBody">
+      <div class="searchRow">
+        <input class="searchInput" id="practiceSearch" placeholder="Search (e.g., Psalm 119 or 'word have I hid')" />
+      </div>
+      <div class="list" id="practiceList"></div>
+    </div>
+  </section>
+
+
     <section class="card hero">
       <div class="heroTop">
         <div>
@@ -65,7 +118,7 @@
         <div class="smallNote">
           “Thy word have I hid in mine heart.” — Psalm 119:11 • Slow and steady is the secret superpower. 🙂
         </div>
-        <button class="ghostBtn" id="practiceBtn" type="button">Practice another verse</button>
+        
       </div>
     </section>
   </main>
