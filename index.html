@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>The Hidden Word (KJV)</title>
+  <link rel="stylesheet" href="./css/styles.css" />
+  <meta name="theme-color" content="#6a5cff" />
+</head>
+<body>
+  <div class="bg"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">✦</div>
+      <div class="brandText">
+        <div class="title">The Hidden Word</div>
+        <div class="subtitle">Hide God’s Word in your heart • KJV • one verse a day</div>
+      </div>
+    </div>
+
+    <div class="rightBits">
+      <div class="pillBadge" id="modeBadge">Daily</div>
+      <button class="ghostBtn" id="myVersesBtn" type="button">My Verses</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card hero">
+      <div class="heroTop">
+        <div>
+          <div class="verseRef" id="verseRef">—</div>
+          <div class="verseDate" id="verseDate">—</div>
+        </div>
+
+        <div class="streakBox" role="status" aria-live="polite">
+          <div class="streakLabel">Streak</div>
+          <div class="streakValue"><span id="streakCount">0</span> days</div>
+        </div>
+      </div>
+
+      <div class="verseText" id="verseText" aria-live="polite"></div>
+
+      <div class="progressRow">
+        <div class="progressLabel" id="progressLabel">Step 1</div>
+        <div class="dots" id="progressDots" aria-hidden="true"></div>
+      </div>
+
+      <div class="controls">
+        <button class="primaryBtn" id="hintBtn" type="button">Hint: next word</button>
+        <button class="softBtn" id="resetStepBtn" type="button">Reset step</button>
+        <button class="softBtn" id="startOverBtn" type="button">Start over</button>
+      </div>
+
+      <div class="pillsArea">
+        <div class="pillsLabel">Tap a word:</div>
+        <div class="pills" id="pills"></div>
+      </div>
+
+      <div class="encourage" id="encourageText"></div>
+    </section>
+
+    <section class="card footerCard">
+      <div class="footerRow">
+        <div class="smallNote">
+          “Thy word have I hid in mine heart.” — Psalm 119:11 • Slow and steady is the secret superpower. 🙂
+        </div>
+        <button class="ghostBtn" id="practiceBtn" type="button">Practice another verse</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- My Verses modal -->
+  <div class="modalOverlay" id="modalOverlay" hidden></div>
+  <div class="modal" id="myVersesModal" role="dialog" aria-modal="true" aria-labelledby="myVersesTitle" hidden>
+    <div class="modalHeader">
+      <div>
+        <div class="modalTitle" id="myVersesTitle">My Verses</div>
+        <div class="modalSub">Verses you’ve completed (on this device).</div>
+      </div>
+      <button class="closeBtn" id="closeModalBtn" type="button" aria-label="Close">✕</button>
+    </div>
+
+    <div class="modalBody">
+      <div class="emptyState" id="emptyState" hidden>
+        No completed verses yet. Your first one is on its way. ✨
+      </div>
+
+      <div class="list" id="completedList"></div>
+    </div>
+
+    <div class="modalFooter">
+      <button class="softBtn" id="closeModalBtn2" type="button">Close</button>
+    </div>
+  </div>
+
+  <!-- Practice picker modal -->
+  <div class="modal" id="practiceModal" role="dialog" aria-modal="true" aria-labelledby="practiceTitle" hidden>
+    <div class="modalHeader">
+      <div>
+        <div class="modalTitle" id="practiceTitle">Practice</div>
+        <div class="modalSub">Pick any verse from the library (practice doesn’t affect streak).</div>
+      </div>
+      <button class="closeBtn" id="closePracticeBtn" type="button" aria-label="Close">✕</button>
+    </div>
+
+    <div class="modalBody">
+      <div class="searchRow">
+        <input class="searchInput" id="practiceSearch" placeholder="Search (e.g., Psalm 119 or 'word have I hid')" />
+      </div>
+      <div class="list" id="practiceList"></div>
+    </div>
+
+    <div class="modalFooter">
+      <button class="softBtn" id="closePracticeBtn2" type="button">Close</button>
+    </div>
+  </div>
+
+  <script src="./js/app.js"></script>
+</body>
+</html>
