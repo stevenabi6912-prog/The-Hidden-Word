@@ -186,10 +186,12 @@ function showGuestModal(action){
   pendingGuestAction = action || null;
   if (!els.guestModal) return;
   els.guestModal.hidden = false;
+  els.guestModal.style.display = "flex";
 }
 function hideGuestModal(){
   if (!els.guestModal) return;
   els.guestModal.hidden = true;
+  els.guestModal.style.display = "none";
 }
 function requireLoginOrGuest(action){
   if (auth?.currentUser) { action(); return; }
@@ -505,7 +507,7 @@ function startOver() {
   state.snap = null;
   renderGame();
 }
-function startGame(verse, mode) {
+function startGameInternal(verse, mode) {
   state = initState(verse, mode);
   els.gameRef.textContent = verse.ref;
   els.gameMode.textContent = mode === "daily" ? `Today: ${todayISO()}` : "Practice (no streak)";
@@ -513,6 +515,11 @@ function startGame(verse, mode) {
   showView("game");
   renderStats();
   renderGame();
+}
+
+// Only warn about guest mode when a verse is about to start.
+function startGame(verse, mode) {
+  requireLoginOrGuest(() => startGameInternal(verse, mode));
 }
 function freshDailyStart(verse) { startGame(verse, "daily"); }
 
@@ -849,11 +856,9 @@ function wire() {
     if (todayVerse) freshDailyStart(todayVerse);
   });
   els.navPick.addEventListener("click", () => {
-    requireLoginOrGuest(() => {
-      setActiveNav(els.navPick);
-      showView("pick");
-      renderPickList(els.pickSearch.value || "");
-    });
+    setActiveNav(els.navPick);
+    showView("pick");
+    renderPickList(els.pickSearch.value || "");
   });
   els.navVerses.addEventListener("click", () => {
     setActiveNav(els.navVerses);
@@ -897,12 +902,10 @@ function wire() {
     });
   });
   els.homePick.addEventListener("click", () => {
-    requireLoginOrGuest(() => {
-      setActiveNav(els.navPick);
-      showView("pick");
-      renderPickList("");
-      els.pickSearch.focus();
-    });
+    setActiveNav(els.navPick);
+    showView("pick");
+    renderPickList("");
+    els.pickSearch.focus();
   });
 
   els.pickSearch.addEventListener("input", () => {
