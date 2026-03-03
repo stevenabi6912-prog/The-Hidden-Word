@@ -39,8 +39,14 @@
       </div>
 
       <div class="homeBtns">
-        <button class="primaryBtn" id="goDailyBtn" type="button">Daily verse</button>
-        <button class="softBtn" id="goPickBtn" type="button">Pick your own</button>
+        <button class="actionCard actionDaily" id="goDailyBtn" type="button">
+          <div class="actionTitle">Daily verse</div>
+          <div class="actionSub">A new KJV verse every day. Builds your streak.</div>
+        </button>
+        <button class="actionCard actionPick" id="goPickBtn" type="button">
+          <div class="actionTitle">Pick your own</div>
+          <div class="actionSub">Choose any verse from the library to practice.</div>
+        </button>
       </div>
 
       <div class="homeHint">Tip: Use “Hint” when you’re stuck — the goal is learning, not racing.</div>
@@ -118,5 +124,7 @@
       <div class="encourage" id="encourageText"></div>
     </section>
 </main>
+
+<script src="js/app.js" defer></script>
 </body>
 </html>

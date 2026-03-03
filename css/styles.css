@@ -426,3 +426,31 @@ button:focus{outline:none; box-shadow: var(--focus)}
 .picker,.verses{padding:0; overflow:hidden; margin-bottom:14px}
 .pickerHeader{padding:14px 16px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px; border-bottom:1px solid rgba(0,0,0,.08)}
 .pickerBody{padding:0 16px 12px}
+
+
+/* Home action cards (big buttons) */
+.homeBtns{display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-top:12px}
+@media (max-width: 820px){ .homeBtns{grid-template-columns:1fr} }
+
+.actionCard{
+  text-align:left;
+  border:1px solid rgba(0,0,0,.10);
+  border-radius: 20px;
+  padding: 14px 14px;
+  background: #ffffffbf;
+  cursor:pointer;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.actionCard:hover{ transform: translateY(-1px); box-shadow: 0 10px 30px rgba(0,0,0,.08); border-color: rgba(0,0,0,.16); }
+.actionCard:active{ transform: translateY(0px); }
+.actionCard:focus{ outline: 3px solid rgba(112,76,255,.22); outline-offset: 2px; }
+
+.actionTitle{ font-size: 18px; font-weight: 900; letter-spacing: .1px; }
+.actionSub{ margin-top: 4px; color: var(--muted); line-height: 1.35; font-size: 13px; }
+
+.actionDaily{
+  background: linear-gradient(135deg, rgba(136,84,255,.22), rgba(255,92,196,.16), rgba(255,255,255,.9));
+}
+.actionPick{
+  background: linear-gradient(135deg, rgba(64,200,255,.18), rgba(112,76,255,.14), rgba(255,255,255,.9));
+}
