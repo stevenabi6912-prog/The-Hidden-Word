@@ -176,6 +176,14 @@ function pickDaily(dateStr) {
   return library[idx];
 }
 
+function updateNavProfileLabel() {
+  const el = document.getElementById("navProfileLabel");
+  if (!el) return;
+  if (!user) { el.textContent = "Profile"; return; }
+  if (activeKid) { el.textContent = activeKid.name; return; }
+  el.textContent = parentProfile?.displayName || "Profile";
+}
+
 function setActiveNav(btn) {
   for (const b of [els.navHome, els.navDaily, els.navPick, els.navVerses, els.navProfile]) {
     b.classList.toggle("isActive", b === btn);
@@ -553,36 +561,84 @@ function renderKidsRow() {
     els.kidsRow.innerHTML = `<div class="empty">Sign in to create child profiles.</div>`;
     els.activeKidName.textContent = "—";
     els.activeKidMeta.textContent = "—";
+    updateNavProfileLabel();
     return;
   }
-  if (!kids.length) {
-    els.kidsRow.innerHTML = `<div class="empty">No children yet. Add one below.</div>`;
-    els.activeKidName.textContent = "—";
-    els.activeKidMeta.textContent = "Add a child name.";
-    return;
-  }
-  const activeId = activeKid?.id;
-  els.kidsRow.innerHTML = kids.map(k => `
-    <button class="kidBtn ${k.id===activeId ? "isActive":""}" type="button" data-kid="${escapeHTML(k.id)}">
+
+  const activeId = activeKid?.id || "parent";
+
+  // Parent selector first
+  const parentBtn = `
+    <button class="kidBtn ${activeId==="parent" ? "isActive":""}" type="button" data-kid="parent" title="Use parent profile">
       <div class="avatar" aria-hidden="true">
         <svg viewBox="0 0 48 48" width="20" height="20">
           <circle cx="24" cy="18" r="9" fill="rgba(13,19,33,.35)"/>
-          <path d="M10 44c1-9 9-14 14-14s13 5 14 14" fill="rgba(13,19,33,.25)"/>
+          <path d="M10 44c1-9 9-14 14-14s13 5 14 14" fill="rgba(13,19,33,.35)"/>
         </svg>
       </div>
-      <div>${escapeHTML(k.name || "Child")}</div>
+      <div class="kidName">${escapeHTML(parentProfile?.displayName || "Parent")}</div>
+    </button>
+  `;
+
+  const kidsHtml = kids.map(k => `
+    <button class="kidBtn ${k.id===activeId ? "isActive":""}" type="button" data-kid="${escapeHTML(k.id)}" title="Switch to ${escapeHTML(k.name)}">
+      <div class="avatar" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="20" height="20">
+          <circle cx="24" cy="18" r="9" fill="rgba(13,19,33,.35)"/>
+          <path d="M10 44c1-9 9-14 14-14s13 5 14 14" fill="rgba(13,19,33,.35)"/>
+        </svg>
+      </div>
+      <div class="kidName">${escapeHTML(k.name)}</div>
+      <button class="kidDel" type="button" data-del="${escapeHTML(k.id)}" aria-label="Delete ${escapeHTML(k.name)}" title="Delete">
+        ×
+      </button>
     </button>
   `).join("");
+
+  els.kidsRow.innerHTML = parentBtn + kidsHtml;
+
+  // Active panel text
+  if (activeId === "parent") {
+    els.activeKidName.textContent = parentProfile?.displayName || "Parent";
+    els.activeKidMeta.textContent = "Parent profile";
+  } else if (activeKid) {
+    els.activeKidName.textContent = activeKid.name;
+    els.activeKidMeta.textContent = `Streak: ${activeKid.streak || 0} • XP: ${activeKid.xp || 0}`;
+  } else {
+    els.activeKidName.textContent = "—";
+    els.activeKidMeta.textContent = "Select a profile.";
+  }
+
+  // Clicks
   els.kidsRow.querySelectorAll(".kidBtn").forEach(btn => {
-    btn.addEventListener("click", async () => {
+    btn.addEventListener("click", async (e) => {
       const id = btn.getAttribute("data-kid");
+      if (id === "parent") {
+        activeKid = null;
+        localStorage.setItem(LS_ACTIVE_KID, "parent");
+        renderKidsRow();
+        renderBadges();
+        renderHomeStats();
+        updateNavProfileLabel();
+        return;
+      }
       await setActiveKidById(id);
-      renderKidsRow();
-      renderStats();
     });
   });
-  els.activeKidName.textContent = activeKid?.name || "—";
-  els.activeKidMeta.textContent = activeKid ? `Streak: ${activeKid.streak||0} • XP: ${activeKid.xp||0}` : "—";
+
+  els.kidsRow.querySelectorAll(".kidDel").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      const id = btn.getAttribute("data-del");
+      if (!id) return;
+      const k = kids.find(x => x.id === id);
+      const ok = confirm(`Delete profile “${k?.name || "child"}”? This cannot be undone.`);
+      if (!ok) return;
+      await deleteKidProfile(id);
+    });
+  });
+
+  updateNavProfileLabel();
 }
 
 function isFirebaseConfigured() {
@@ -647,6 +703,7 @@ async function listKids() {
   const items = [];
   snap.forEach(docu => {
     const d = docu.data() || {};
+    if (d.deleted) return;
     items.push({
       id: docu.id,
       name: d.name || "Child",
@@ -699,20 +756,41 @@ async function setActiveKidById(kidId) {
   renderStats();
 }
 
+async function deleteKidProfile(kidId) {
+  if (!user) return;
+  const ref = doc(db, "users", user.uid, "kids", kidId);
+  // Soft-delete: mark deleted to avoid orphaned progress; then filter it out.
+  await updateDoc(ref, { deleted: true, deletedAt: Date.now() }).catch(async () => {
+    // If update fails (doc missing), just ignore.
+  });
+
+  kids = kids.filter(k => k.id !== kidId);
+
+  // If we deleted the active kid, fall back to parent (or first remaining kid)
+  if (activeKid?.id === kidId) {
+    activeKid = null;
+    localStorage.setItem(LS_ACTIVE_KID, "parent");
+  }
+
+  renderKidsRow();
+  renderBadges();
+  renderHomeStats();
+  updateNavProfileLabel();
+}
+
 async function loadParentAndKids() {
   await ensureParentDoc();
   kids = await listKids();
-
-  // If no kids exist yet, create one default kid.
-  if (!kids.length) {
-    const defaultId = await createKid("Kid 1");
-    kids = await listKids();
-    localStorage.setItem(LS_ACTIVE_KID, defaultId);
-  }
+  // If no kids exist yet, we’ll ask the parent to add one.
 
   const saved = localStorage.getItem(LS_ACTIVE_KID);
-  const pickId = (saved && kids.some(k => k.id === saved)) ? saved : kids[0].id;
-  await setActiveKidById(pickId);
+  if (saved === "parent" || !kids.length) {
+    activeKid = null;
+    localStorage.setItem(LS_ACTIVE_KID, "parent");
+  } else {
+    const pickId = (saved && kids.some(k => k.id === saved)) ? saved : kids[0].id;
+    await setActiveKidById(pickId);
+  }
 }
 
 async function saveActiveKidDoc() {
