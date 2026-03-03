@@ -89,7 +89,14 @@ const els = {
   btnSignUp: document.getElementById("btnSignUp"),
   authMsg: document.getElementById("authMsg"),
   firebaseStatus: document.getElementById("firebaseStatus"),
+
+  guestModal: document.getElementById("guestModal"),
+  guestGoProfile: document.getElementById("guestGoProfile"),
+  guestContinue: document.getElementById("guestContinue"),
 };
+
+let guestAllowed = localStorage.getItem('thw_guest_ok') === '1';
+let pendingGuestAction = null;
 
 let library = [];
 let todayVerse = null;
@@ -173,6 +180,21 @@ function setActiveNav(btn) {
   for (const b of [els.navHome, els.navDaily, els.navPick, els.navVerses, els.navProfile]) {
     b.classList.toggle("isActive", b === btn);
   }
+}
+
+function showGuestModal(action){
+  pendingGuestAction = action || null;
+  if (!els.guestModal) return;
+  els.guestModal.hidden = false;
+}
+function hideGuestModal(){
+  if (!els.guestModal) return;
+  els.guestModal.hidden = true;
+}
+function requireLoginOrGuest(action){
+  if (auth?.currentUser) { action(); return; }
+  if (guestAllowed) { action(); return; }
+  showGuestModal(action);
 }
 function showView(name) {
   els.viewHome.hidden = name !== "home";
@@ -372,8 +394,14 @@ function celebrateAndGoHome() {
   document.body.appendChild(overlay);
   setTimeout(() => {
     overlay.remove();
-    setActiveNav(els.navHome);
-    showView("home");
+    if (!auth?.currentUser && !guestAllowed) {
+      setActiveNav(els.navProfile);
+      showView("profile");
+      renderProfile();
+    } else {
+      setActiveNav(els.navHome);
+      showView("home");
+    }
     renderStats();
     renderToday();
   }, 1200);
@@ -821,9 +849,11 @@ function wire() {
     if (todayVerse) freshDailyStart(todayVerse);
   });
   els.navPick.addEventListener("click", () => {
-    setActiveNav(els.navPick);
-    showView("pick");
-    renderPickList(els.pickSearch.value || "");
+    requireLoginOrGuest(() => {
+      setActiveNav(els.navPick);
+      showView("pick");
+      renderPickList(els.pickSearch.value || "");
+    });
   });
   els.navVerses.addEventListener("click", () => {
     setActiveNav(els.navVerses);
@@ -836,17 +866,43 @@ function wire() {
     renderProfile();
     renderKidsRow();
     renderStats();
+  })
+  // Guest warning modal (when not signed in)
+  els.guestGoProfile?.addEventListener("click", () => {
+    hideGuestModal();
+    setActiveNav(els.navProfile);
+    showView("profile");
+    renderProfile();
+    renderKidsRow();
+    renderStats();
+  });
+  els.guestContinue?.addEventListener("click", () => {
+    guestAllowed = true;
+    localStorage.setItem("thw_guest_ok", "1");
+    const fn = pendingGuestAction;
+    pendingGuestAction = null;
+    hideGuestModal();
+    if (typeof fn === "function") fn();
+  });
+  els.guestModal?.addEventListener("click", (e) => {
+    if (e.target === els.guestModal) hideGuestModal();
   });
 
+;
+
   els.homeDaily.addEventListener("click", () => {
-    setActiveNav(els.navDaily);
-    if (todayVerse) freshDailyStart(todayVerse);
+    requireLoginOrGuest(() => {
+      setActiveNav(els.navDaily);
+      if (todayVerse) freshDailyStart(todayVerse);
+    });
   });
   els.homePick.addEventListener("click", () => {
-    setActiveNav(els.navPick);
-    showView("pick");
-    renderPickList("");
-    els.pickSearch.focus();
+    requireLoginOrGuest(() => {
+      setActiveNav(els.navPick);
+      showView("pick");
+      renderPickList("");
+      els.pickSearch.focus();
+    });
   });
 
   els.pickSearch.addEventListener("input", () => {

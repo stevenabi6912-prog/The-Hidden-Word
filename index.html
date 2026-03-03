@@ -8,11 +8,12 @@
   <script type="importmap">
     {
       "imports": {
-        "firebase/app": "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js",
-        "firebase/auth": "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js",
-        "firebase/firestore": "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js"
+            "firebase/app": "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js",
+            "firebase/auth": "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js",
+            "firebase/firestore": "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js",
+            "firebase/analytics": "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js"
       }
-    }
+}
   </script>
 
   <meta name="description" content="Hide God's Word in your heart — KJV — one verse a day." />
@@ -40,7 +41,7 @@
       <button class="navBtn" id="navDaily" type="button">Daily</button>
       <button class="navBtn" id="navPick" type="button">Pick</button>
       <button class="navBtn" id="navVerses" type="button">My Verses</button>
-      <button class="navBtn" id="navProfile" type="button">Profile</button>
+      <button class="navBtn" id="navProfile" type="button"><span class="navAvatar" aria-hidden="true"></span>Profile</button>
     </nav>
   </header>
 
@@ -108,7 +109,7 @@
     <section class="card" id="viewProfile" hidden>
       <div class="viewHeader">
         <div>
-          <div class="viewTitle">Family Profiles</div>
+          <div class="viewTitle"><span class="titleAvatar" aria-hidden="true"></span>Family Profiles</div>
           <div class="muted">One parent account — tap a child to switch. Progress stays separate.</div>
         </div>
       </div>
@@ -254,5 +255,19 @@
       </div>
     </section>
   </main>
+
+  <div class="modalOverlay" id="guestModal" hidden>
+    <div class="modalCard">
+      <div class="modalTitle">Not signed in</div>
+      <div class="modalText">
+        You're not signed in, so your streak, XP, and completed verses may be lost if you switch devices or clear browser data.
+      </div>
+      <div class="modalBtns">
+        <button class="btn" id="guestGoProfile" type="button">Log in</button>
+        <button class="btn primary" id="guestContinue" type="button">Continue without logging in</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
