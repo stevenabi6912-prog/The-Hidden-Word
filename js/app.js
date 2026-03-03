@@ -250,6 +250,7 @@
       step: 1,
       revealed: new Set(),
       locked: false,
+      hint: null,
     };
   }
 
@@ -276,6 +277,7 @@
   function startGame(verse, mode) {
     const existing = loadProgress(verse);
     state = initState(verse, mode);
+    state.hint = null;
     if (existing) {
       state.step = Math.max(1, Math.min(state.hiddenIdx.length, +existing.step || 1));
       state.revealed = new Set((existing.revealed || []).filter((n) => Number.isInteger(n)));
@@ -350,13 +352,22 @@
 
     const expected = nextExpectedIndex();
     if (expected === null) {
+      // Finished current step. Either advance to the next (with MORE blanks) or complete the verse.
       if (state.step >= state.hiddenIdx.length) {
         els.pillRow.innerHTML = "";
         els.stepLabel.textContent = "Complete 🎉";
         onVerseComplete();
+        celebrateAndGoHome();
         return;
       }
+
       state.step += 1;
+
+      // IMPORTANT: each step is a fresh attempt with more blanks.
+      // So we clear revealed words for the new step (kids are rebuilding the verse each time).
+      state.revealed.clear();
+      state.hint = null;
+
       saveProgress();
       renderGame();
       return;
@@ -367,17 +378,19 @@
     const { correctWord, correctIdx, pills } = built;
 
     els.pillRow.innerHTML = pills
-      .map(
-        (w) => `
-      <button class="pill" type="button" data-word="${escapeHTML(w)}">${escapeHTML(w)}</button>
-    `
-      )
+      .map((w) => {
+        const hinted = state.hint && w === state.hint;
+        return `
+      <button class="pill${hinted ? " hint" : ""}" type="button" data-word="${escapeHTML(w)}">${escapeHTML(w)}</button>
+    `;
+      })
       .join("");
 
     els.pillRow.querySelectorAll(".pill").forEach((btn) => {
       btn.addEventListener("click", () => {
         if (state.locked) return;
         state.locked = true;
+        state.hint = null;
 
         const w = btn.getAttribute("data-word") || "";
         const ok = w === correctWord;
@@ -389,7 +402,7 @@
           setTimeout(() => {
             state.locked = false;
             renderGame();
-          }, 180);
+          }, 430);
         } else {
           setTimeout(() => {
             btn.classList.remove("bad");
@@ -404,8 +417,8 @@
     if (!state) return;
     const idx = nextExpectedIndex();
     if (idx === null) return;
-    state.revealed.add(idx);
-    saveProgress();
+    // Highlight the correct pill (kid still taps it).
+    state.hint = state.tokens[idx];
     renderGame();
   }
 
@@ -413,6 +426,7 @@
     if (!state) return;
     const slice = currentHiddenSlice();
     for (const idx of slice) state.revealed.delete(idx);
+    state.hint = null;
     saveProgress();
     renderGame();
   }
@@ -421,9 +435,34 @@
     if (!state) return;
     state.step = 1;
     state.revealed.clear();
+    state.hint = null;
     clearProgress(state.verse);
     saveProgress();
     renderGame();
+  }
+
+  
+  function celebrateAndGoHome() {
+    // A quick, kid-friendly celebration then return to Home.
+    const overlay = document.createElement("div");
+    overlay.className = "celebrateOverlay";
+    overlay.innerHTML = `
+      <div class="celebrateCard">
+        <div class="celebrateSparkle">✨</div>
+        <div class="celebrateTitle">Great job!</div>
+        <div class="celebrateSub">Verse complete.</div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Auto-return home after the animation.
+    setTimeout(() => {
+      overlay.remove();
+      setActiveNav(els.navHome);
+      showView("home");
+      renderStats();
+      renderToday();
+    }, 1200);
   }
 
   function onVerseComplete() {
