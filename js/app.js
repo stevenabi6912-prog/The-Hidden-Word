@@ -38,10 +38,9 @@
     verseBox: document.getElementById("verseBox"),
     pillRow: document.getElementById("pillRow"),
     btnHint: document.getElementById("btnHint"),
+    btnFullAttempt: document.getElementById("btnFullAttempt"),
     btnResetStep: document.getElementById("btnResetStep"),
-    btnStartOver: document.getElementById("btnStartOver"),
-    btnRedoDaily: document.getElementById("btnRedoDaily"),
-    stepLabel: document.getElementById("stepLabel"),
+    btnStartOver: document.getElementById("btnStartOver"),    stepLabel: document.getElementById("stepLabel"),
   };
 
   let todayVerse = null;
@@ -113,8 +112,7 @@
     els.viewPick.hidden = name !== "pick";
     els.viewVerses.hidden = name !== "verses";
     els.viewGame.hidden = name !== "game";
-    if (els.btnRedoDaily) els.btnRedoDaily.hidden = name !== "game" || !state || state.mode !== "daily";
-  }
+      }
 
   function getStreak() {
     const s = loadLS(LS.streak, { currentStreak: 0, lastCompleted: null });
@@ -255,6 +253,8 @@
       revealed: new Set(),
       locked: false,
       hint: null,
+      fullAttempt: false,
+      snap: null,
     };
   }
 
@@ -276,6 +276,13 @@
   }
   function clearProgress(verse) {
     localStorage.removeItem(LS.progressPrefix + getVerseKey(verse));
+  }
+
+  
+  function freshDailyStart(verse) {
+    // Always start fresh when selecting Daily from Home, even if it was completed earlier.
+    clearProgress(verse); // clears per-verse progress only
+    startGame(verse, "daily");
   }
 
   function startGame(verse, mode) {
@@ -442,13 +449,23 @@
   }
 
   
-  function redoDaily() {
+  function startFullAttempt() {
     if (!state) return;
-    if (state.mode !== "daily") return;
-    state.step = 1;
+    if (state.fullAttempt) return;
+
+    // Snapshot current step so we can restore if they miss.
+    state.snap = {
+      step: state.step,
+      revealed: Array.from(state.revealed),
+      hint: state.hint,
+    };
+
+    state.fullAttempt = true;
+    // Force "all words hidden" for this attempt.
+    state.step = state.hiddenIdx.length;
     state.revealed.clear();
     state.hint = null;
-    clearProgress(state.verse);
+
     saveProgress();
     renderGame();
   }
@@ -488,6 +505,8 @@
   }
 
   function onVerseComplete() {
+    if (state) { state.fullAttempt = false; state.snap = null; }
+
     addCompleted(state.verse);
     if (state.mode === "daily") setStreakOnComplete(todayISO());
     renderStats();
@@ -501,7 +520,7 @@
       renderToday();
     });
     els.navDaily.addEventListener("click", () => {
-      if (todayVerse) startGame(todayVerse, "daily");
+      if (todayVerse) freshDailyStart(todayVerse);
     });
     els.navPick.addEventListener("click", () => {
       setActiveNav(els.navPick);
@@ -516,7 +535,7 @@
 
     els.homeDaily.addEventListener("click", () => {
       setActiveNav(els.navDaily);
-      if (todayVerse) startGame(todayVerse, "daily");
+      if (todayVerse) freshDailyStart(todayVerse);
     });
     els.homePick.addEventListener("click", () => {
       setActiveNav(els.navPick);
@@ -530,10 +549,9 @@
     });
 
     els.btnHint.addEventListener("click", hintNext);
+    els.btnFullAttempt.addEventListener("click", startFullAttempt);
     els.btnResetStep.addEventListener("click", resetStep);
-    els.btnStartOver.addEventListener("click", startOver);
-    els.btnRedoDaily.addEventListener("click", redoDaily);
-  }
+    els.btnStartOver.addEventListener("click", startOver);  }
 
   async function boot() {
     const stamp =
