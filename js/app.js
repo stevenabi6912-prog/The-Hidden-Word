@@ -893,14 +893,11 @@ function wireUI(){
   els.closeModalBtn2.addEventListener("click", () => closeModal(els.myVersesModal));
 
   els.practiceBtn.addEventListener("click", openPracticePicker);
-  els.  els.
-  els.practiceSearch.addEventListener("input", () => renderPracticePicker());
 
 
   if (els.bibleBtn){
     els.bibleBtn.addEventListener("click", openBiblePicker);
   }
-  if (els.    els.    els.  }
   if (els.loadVerseBtn){
     els.loadVerseBtn.addEventListener("click", async () => {
       try{
