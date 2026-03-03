@@ -719,8 +719,8 @@ function renderStreak(){
 
 
 function showHome(){
-  // Hide the game hero and show home
-  const hero = document.querySelector(".hero");
+  // Home screen: hide game and show home
+  const hero = document.getElementById("gameView") || document.querySelector(".hero");
   if (hero) hero.style.display = "none";
   if (els.pickView) els.pickView.hidden = true;
   if (els.homeView) els.homeView.hidden = false;
@@ -730,7 +730,7 @@ function showHome(){
 }
 
 function showVerses(){
-  const hero = document.querySelector(".hero");
+  const hero = document.getElementById("gameView") || document.querySelector(".hero");
   if (hero) hero.style.display = "none";
   if (els.homeView) els.homeView.hidden = true;
   if (els.pickView) els.pickView.hidden = true;
@@ -763,7 +763,7 @@ function renderMyVersesInline(){
 }
 
 function showPicker(){
-  const hero = document.querySelector(".hero");
+  const hero = document.getElementById("gameView") || document.querySelector(".hero");
   if (hero) hero.style.display = "none";
   if (els.homeView) els.homeView.hidden = true;
   if (els.pickView) els.pickView.hidden = false;
@@ -772,8 +772,8 @@ function showPicker(){
 }
 
 function showGame(){
-  const hero = document.querySelector(".hero");
-  if (hero) hero.style.display = "";
+  const hero = document.getElementById("gameView") || document.querySelector(".hero");
+  if (hero) hero.style.display = "block";
   if (els.homeView) els.homeView.hidden = true;
   if (els.pickView) els.pickView.hidden = true;
 }
@@ -820,7 +820,7 @@ function renderAll(){
 }
 
 async function loadData(){
-  const url = new URL("./data/verses.json", window.location.href);
+  const url = new URL("data/verses.json", window.location.href);
   const res = await fetch(url.toString(), { cache:"no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status} loading ${url}`);
   const txt = await res.text();
@@ -851,6 +851,7 @@ function wireUI(){
   els.goDailyBtn?.addEventListener("click", () => {
     const todayKey = todayISO();
     const { verse } = getDailyVerse(todayKey);
+    showGame();
     current = initStateForVerse(verse, todayKey, "daily");
     current = loadProgressFor(current);
     saveLS(LS.lastMode, { mode:"daily" });

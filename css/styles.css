@@ -409,3 +409,7 @@ button:focus{outline:none; box-shadow: var(--focus)}
   border-bottom:1px solid rgba(0,0,0,.08);
 }
 .pickerBody{padding:0 16px 12px}
+
+
+/* Start on Home: game hidden until user chooses */
+#gameView{display:none}
