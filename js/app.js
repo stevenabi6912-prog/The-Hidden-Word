@@ -40,6 +40,7 @@
     btnHint: document.getElementById("btnHint"),
     btnResetStep: document.getElementById("btnResetStep"),
     btnStartOver: document.getElementById("btnStartOver"),
+    btnRedoDaily: document.getElementById("btnRedoDaily"),
     stepLabel: document.getElementById("stepLabel"),
   };
 
@@ -112,6 +113,7 @@
     els.viewPick.hidden = name !== "pick";
     els.viewVerses.hidden = name !== "verses";
     els.viewGame.hidden = name !== "game";
+    if (els.btnRedoDaily) els.btnRedoDaily.hidden = name !== "game" || !state || state.mode !== "daily";
   }
 
   function getStreak() {
@@ -188,6 +190,7 @@
       <button class="itemBtn" type="button" data-ref="${escapeHTML(v.ref)}">
         <div class="itemRef">${escapeHTML(v.ref)}</div>
         <div class="itemText">${escapeHTML(v.text)}</div>
+        <div class="itemDate">${(() => { const d = v.at ? new Date(v.at) : null; const ds = d && !isNaN(d) ? d.toLocaleDateString() : ""; return ds ? "Memorized: " + escapeHTML(ds) : ""; })()}</div>
       </button>
     `
       )
@@ -213,6 +216,7 @@
       <button class="itemBtn" type="button" data-key="${escapeHTML(v.key)}">
         <div class="itemRef">${escapeHTML(v.ref)}</div>
         <div class="itemText">${escapeHTML(v.text)}</div>
+        <div class="itemDate">${(() => { const d = v.at ? new Date(v.at) : null; const ds = d && !isNaN(d) ? d.toLocaleDateString() : ""; return ds ? "Memorized: " + escapeHTML(ds) : ""; })()}</div>
       </button>
     `
       )
@@ -297,8 +301,12 @@
 
   function renderVerseWithBlanks() {
     const hideSet = new Set(currentHiddenSlice());
+    const focusIdx = nextExpectedIndex();
     const parts = state.tokens.map((t, i) => {
-      if (hideSet.has(i) && !state.revealed.has(i)) return `<span class="blank">____</span>`;
+      if (hideSet.has(i) && !state.revealed.has(i)) {
+        const cls = i === focusIdx ? "blank focus" : "blank";
+        return `<span class="${cls}">____</span>`;
+      }
       return escapeHTML(t);
     });
     let s = parts.join(" ");
@@ -315,9 +323,11 @@
   }
 
   function nextExpectedIndex() {
+    // Fill blanks from left-to-right (verse order), not the hide order.
     const slice = currentHiddenSlice();
-    for (const idx of slice) if (!state.revealed.has(idx)) return idx;
-    return null;
+    const remaining = slice.filter((i) => !state.revealed.has(i));
+    if (!remaining.length) return null;
+    return remaining.reduce((a, b) => (a < b ? a : b));
   }
 
   function buildPills() {
@@ -431,6 +441,18 @@
     renderGame();
   }
 
+  
+  function redoDaily() {
+    if (!state) return;
+    if (state.mode !== "daily") return;
+    state.step = 1;
+    state.revealed.clear();
+    state.hint = null;
+    clearProgress(state.verse);
+    saveProgress();
+    renderGame();
+  }
+
   function startOver() {
     if (!state) return;
     state.step = 1;
@@ -510,6 +532,7 @@
     els.btnHint.addEventListener("click", hintNext);
     els.btnResetStep.addEventListener("click", resetStep);
     els.btnStartOver.addEventListener("click", startOver);
+    els.btnRedoDaily.addEventListener("click", redoDaily);
   }
 
   async function boot() {
