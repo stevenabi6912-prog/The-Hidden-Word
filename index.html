@@ -8,9 +8,9 @@
   <link rel="icon" href="favicon.ico" />
   <link rel="stylesheet" href="css/styles.css" />
   <script>
-    window.__THW_BUILD__ = { version: "1.0.3-root", built: "2026-03-03 17:58:48Z" };
+    window.__THW_BUILD__ = { version: "2.0.0-users", built: "2026-03-03 17:58:48Z" };
   </script>
-  <script src="js/app.js" defer></script>
+  <script type="module" src="js/app.js"></script>
 </head>
 <body>
   <div class="bg"></div>
@@ -29,6 +29,7 @@
       <button class="navBtn" id="navDaily" type="button">Daily</button>
       <button class="navBtn" id="navPick" type="button">Pick</button>
       <button class="navBtn" id="navVerses" type="button">My Verses</button>
+      <button class="navBtn" id="navProfile" type="button">Profile</button>
     </nav>
   </header>
 
@@ -48,6 +49,10 @@
               <div class="pillLabel">Completed</div>
               <div class="pillValue"><span id="completedHome">0</span></div>
             </div>
+            <div class="pillStat">
+              <div class="pillLabel">XP</div>
+              <div class="pillValue"><span id="xpHome">0</span></div>
+            </div>
           </div>
 
           <div class="bigBtns">
@@ -64,11 +69,12 @@
 
           <div class="hintLine">Tip: Use “Hint” when you're stuck — the goal is learning, not racing.</div>
 
-          <div class="health" id="healthBox">
-            <div class="healthRow">
-              <span class="healthKey">App</span>
-              <span class="healthVal" id="healthVersion"></span>
-            </div>
+          <div class="badgeBox">
+            <div class="badgeTitle">Badges</div>
+            <div class="badgeRow" id="badgeRowHome"></div>
+          </div>
+
+          
             <div class="healthRow">
               <span class="healthKey">Verses loaded</span>
               <span class="healthVal" id="healthVerses">—</span>
@@ -85,6 +91,57 @@
           <div class="todayRef" id="todayRef">Loading…</div>
           <div class="todayText" id="todayText">Loading…</div>
         </aside>
+      </div>
+    </section>
+
+    <section class="card" id="viewProfile" hidden>
+      <div class="viewHeader">
+        <div>
+          <div class="viewTitle">Profile</div>
+          <div class="muted">Sign in so streaks, XP, and badges follow you across devices.</div>
+        </div>
+      </div>
+
+      <div class="profileGrid">
+        <div class="profileCard">
+          <div class="profileLabel">Signed in as</div>
+          <div class="profileName" id="profileName">—</div>
+          <div class="profileMeta" id="profileMeta">—</div>
+
+          <div class="profileButtons">
+            <button class="soft" id="btnSignOut" type="button">Sign out</button>
+          </div>
+        </div>
+
+        <div class="authCard" id="authCard">
+          <div class="authTitle">Sign in</div>
+          <div class="authRow">
+            <label class="authLabel">Display name</label>
+            <input class="searchInput" id="authName" placeholder="e.g., Luke" />
+          </div>
+          <div class="authRow">
+            <label class="authLabel">Email</label>
+            <input class="searchInput" id="authEmail" placeholder="parent@email.com" />
+          </div>
+          <div class="authRow">
+            <label class="authLabel">Password</label>
+            <input class="searchInput" id="authPass" type="password" placeholder="••••••••" />
+          </div>
+          <div class="profileButtons">
+            <button class="primary" id="btnSignIn" type="button">Sign in</button>
+            <button class="soft" id="btnSignUp" type="button">Create account</button>
+          </div>
+          <div class="muted small" id="authMsg"></div>
+
+          <div class="authDivider"></div>
+          <div class="muted small">Admin note: paste your Firebase config into <b>js/firebase-config.js</b>.</div>
+          <div class="muted small" id="firebaseStatus"></div>
+        </div>
+      </div>
+
+      <div class="badgeBox">
+        <div class="badgeTitle">Your badges</div>
+        <div class="badgeRow" id="badgeRowProfile"></div>
       </div>
     </section>
 
@@ -120,6 +177,10 @@
         <div class="streakPill">
           <div class="pillLabel">Streak</div>
           <div class="pillValue"><span id="streakGame">0</span> days</div>
+        </div>
+        <div class="streakPill">
+          <div class="pillLabel">XP</div>
+          <div class="pillValue"><span id="xpGame">0</span></div>
         </div>
       </div>
 
