@@ -267,7 +267,9 @@ function renderPickList(filter = "") {
     btn.addEventListener("click", () => {
       const ref = btn.getAttribute("data-ref");
       const verse = library.find(x => x.ref === ref);
-      if (verse) startGame(verse, "pick");
+      if (!verse) return;
+      // Warn if not signed in (allow guest continue).
+      requireLoginOrGuest(() => startGame(verse, "pick"));
     });
   });
 }
@@ -293,7 +295,8 @@ function renderMyVerses() {
     btn.addEventListener("click", () => {
       const key = btn.getAttribute("data-key");
       const found = items.find(x => x.key === key);
-      if (found) startGame({ ref: found.ref, text: found.text }, "pick");
+      if (!found) return;
+      requireLoginOrGuest(() => startGame({ ref: found.ref, text: found.text }, "pick"));
     });
   });
 }
@@ -935,8 +938,16 @@ async function boot() {
 
   await initFirebase();
 
-  setActiveNav(els.navHome);
-  showView("home");
+  // Start on Profile (login) unless the user is already signed in or has
+  // explicitly chosen to continue as a guest on this device.
+  if (!auth?.currentUser && !guestAllowed) {
+    setActiveNav(els.navProfile);
+    showView("profile");
+    renderProfile();
+  } else {
+    setActiveNav(els.navHome);
+    showView("home");
+  }
   renderKidsRow();
   renderStats();
 }
