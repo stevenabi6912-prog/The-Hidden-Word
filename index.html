@@ -4,13 +4,24 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>The Hidden Word (KJV)</title>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js"
+      }
+    }
+  </script>
+
   <meta name="description" content="Hide God's Word in your heart — KJV — one verse a day." />
   <link rel="icon" href="favicon.ico" />
   <link rel="stylesheet" href="css/styles.css" />
   <script>
     window.__THW_BUILD__ = { version: "2.0.0-users", built: "2026-03-03 17:58:48Z" };
   </script>
-  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/app.js?v=6"></script>
 </head>
 <body>
   <div class="bg"></div>
@@ -97,28 +108,40 @@
     <section class="card" id="viewProfile" hidden>
       <div class="viewHeader">
         <div>
-          <div class="viewTitle">Profile</div>
-          <div class="muted">Sign in so streaks, XP, and badges follow you across devices.</div>
+          <div class="viewTitle">Family Profiles</div>
+          <div class="muted">One parent account — tap a child to switch. Progress stays separate.</div>
         </div>
       </div>
 
       <div class="profileGrid">
         <div class="profileCard">
-          <div class="profileLabel">Signed in as</div>
+          <div class="profileLabel">Parent account</div>
           <div class="profileName" id="profileName">—</div>
           <div class="profileMeta" id="profileMeta">—</div>
 
           <div class="profileButtons">
             <button class="soft" id="btnSignOut" type="button">Sign out</button>
           </div>
+
+          <div class="authDivider"></div>
+
+          <div class="profileLabel">Active child</div>
+          <div class="activeChildRow">
+            <div class="avatar" id="activeAvatar" aria-hidden="true">
+              <svg viewBox="0 0 48 48" width="24" height="24" role="img" aria-label="profile">
+                <circle cx="24" cy="18" r="9" fill="rgba(13,19,33,.35)"/>
+                <path d="M10 44c1-9 9-14 14-14s13 5 14 14" fill="rgba(13,19,33,.25)"/>
+              </svg>
+            </div>
+            <div>
+              <div class="profileName" id="activeKidName">—</div>
+              <div class="profileMeta" id="activeKidMeta">Tap a child below to switch.</div>
+            </div>
+          </div>
         </div>
 
         <div class="authCard" id="authCard">
-          <div class="authTitle">Sign in</div>
-          <div class="authRow">
-            <label class="authLabel">Display name</label>
-            <input class="searchInput" id="authName" placeholder="e.g., Luke" />
-          </div>
+          <div class="authTitle">Sign in (Parent)</div>
           <div class="authRow">
             <label class="authLabel">Email</label>
             <input class="searchInput" id="authEmail" placeholder="parent@email.com" />
@@ -129,21 +152,51 @@
           </div>
           <div class="profileButtons">
             <button class="primary" id="btnSignIn" type="button">Sign in</button>
+          </div>
+
+          <div class="authDivider"></div>
+
+          <div class="authTitle">Create parent account</div>
+          <div class="authRow">
+            <label class="authLabel">Parent display name</label>
+            <input class="searchInput" id="authName" placeholder="e.g., Steven" />
+          </div>
+          <div class="authRow">
+            <label class="authLabel">Email</label>
+            <input class="searchInput" id="authEmail2" placeholder="parent@email.com" />
+          </div>
+          <div class="authRow">
+            <label class="authLabel">Password</label>
+            <input class="searchInput" id="authPass2" type="password" placeholder="••••••••" />
+          </div>
+          <div class="profileButtons">
             <button class="soft" id="btnSignUp" type="button">Create account</button>
           </div>
+
           <div class="muted small" id="authMsg"></div>
 
           <div class="authDivider"></div>
-          <div class="muted small">Admin note: paste your Firebase config into <b>js/firebase-config.js</b>.</div>
+          <div class="muted small">Admin: paste Firebase config into <b>js/firebase-config.js</b>.</div>
           <div class="muted small" id="firebaseStatus"></div>
         </div>
       </div>
 
+      <div class="kidsBox">
+        <div class="badgeTitle">Children</div>
+        <div class="kidsRow" id="kidsRow"></div>
+
+        <div class="kidsAdd">
+          <input class="searchInput" id="kidName" placeholder="Add a child name (e.g., Luke)" />
+          <button class="primary" id="btnAddKid" type="button">Add</button>
+        </div>
+        <div class="muted small">Each child has separate streak, XP, badges, and completed verses.</div>
+      </div>
+
       <div class="badgeBox">
-        <div class="badgeTitle">Your badges</div>
+        <div class="badgeTitle">Badges (active child)</div>
         <div class="badgeRow" id="badgeRowProfile"></div>
       </div>
-    </section>
+</section>
 
     <section class="card" id="viewPick" hidden>
       <div class="viewHeader">
