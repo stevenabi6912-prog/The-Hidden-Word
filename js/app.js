@@ -1,974 +1,503 @@
-// Verse Ladder — client-only, GitHub Pages friendly
-// No accounts. No leaderboards. Just a gentle daily habit.
+/* The Hidden Word — root stable release
+   Version: 1.0.0-root
+   Built: 2026-03-03 17:58:48Z
+*/
+(() => {
+  "use strict";
 
-const STOPWORDS = new Set([
-  "the","and","of","to","in","that","is","it","for","on","with","as","be","are","was","were",
-  "a","an","at","by","from","or","but","not","this","these","those","his","her","their","thy",
-  "ye","you","your","our","we","us","he","she","they","them","him","i","me","my","mine",
-  "shall","unto","hath","have","had","do","did","doth","may","might","will","would","can","could",
-  "there","here","then","than","when","where","who","whom","which","what","why","how"
-]);
-
-const ENCOURAGEMENTS = [
-  "Nice work. Keep going — one word at a time.",
-  "Steady steps build strong memory.",
-  "That’s it. Let it sink in for a moment.",
-  "You’re doing the kind of work that lasts.",
-  "Small wins add up.",
-  "Good! Now try the next word.",
-  "Keep the pace friendly. You’re learning."
-];
-
-const LS = {
-  completed: "verseLadder:completed",
-  streak: "verseLadder:streak",
-  progressPrefix: "verseLadder:progress:",   // + YYYY-MM-DD (daily) OR "practice:<verseId>"
-  lastMode: "verseLadder:lastMode"
-};
-
-const els = {
-  navHome: document.getElementById("navHome"),
-  navDaily: document.getElementById("navDaily"),
-  navPick: document.getElementById("navPick"),
-  navMyVerses: document.getElementById("navMyVerses"),
-
-  verseRef: document.getElementById("verseRef"),
-  verseDate: document.getElementById("verseDate"),
-  verseText: document.getElementById("verseText"),
-  pills: document.getElementById("pills"),
-  hintBtn: document.getElementById("hintBtn"),
-  resetStepBtn: document.getElementById("resetStepBtn"),
-  startOverBtn: document.getElementById("startOverBtn"),
-  progressLabel: document.getElementById("progressLabel"),
-  progressDots: document.getElementById("progressDots"),
-  encourageText: document.getElementById("encourageText"),
-  streakCount: document.getElementById("streakCount"),
-  modeBadge: document.getElementById("modeBadge"),
-  myVersesBtn: document.getElementById("myVersesBtn"),
-  practiceBtn: document.getElementById("practiceBtn"),
-
-  bibleBtn: document.getElementById("bibleBtn"),  bookSelect: document.getElementById("bookSelect"),
-  chapterInput: document.getElementById("chapterInput"),
-  verseInput: document.getElementById("verseInput"),
-  loadVerseBtn: document.getElementById("loadVerseBtn"),
-  bibleHelp: document.getElementById("bibleHelp"),
-  pickerPreview: document.getElementById("pickerPreview"),  closeModalBtn: document.getElementById("closeModalBtn"),
-  closeModalBtn2: document.getElementById("closeModalBtn2"),
-  completedList: document.getElementById("completedList"),
-  emptyState: document.getElementById("emptyState"),  practiceList: document.getElementById("practiceList"),
-  homeView: document.getElementById("homeView"),
-  pickView: document.getElementById("pickView"),
-  versesView: document.getElementById("versesView"),
-  gameView: document.getElementById("gameView"),
-  goDailyBtn: document.getElementById("goDailyBtn"),
-  goPickBtn: document.getElementById("goPickBtn"),
-  backHomeBtn: document.getElementById("backHomeBtn"),
-  backHomeBtn2: document.getElementById("backHomeBtn2"),
-  streakCountHome: document.getElementById("streakCountHome"),
-  completedCountHome: document.getElementById("completedCountHome"),
-  homeTodayRef: document.getElementById("homeTodayRef"),
-  homeTodayText: document.getElementById("homeTodayText"),
-  myVersesList: document.getElementById("myVersesList"),
-  practiceSearch: document.getElementById("practiceSearch"),};
-
-let VERSE_DATA = null;
-let BIBLE_INDEX = null; // optional, generated bible index
-let current = null; // game state object
-
-// ---------- Utilities ----------
-function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
-
-function todayISO(){
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,"0");
-  const day = String(d.getDate()).padStart(2,"0");
-  return `${y}-${m}-${day}`;
-}
-
-function parseISO(iso){
-  const [y,m,d] = iso.split("-").map(Number);
-  return new Date(y, m-1, d);
-}
-
-function daysBetween(aISO, bISO){
-  const a = parseISO(aISO);
-  const b = parseISO(bISO);
-  const ms = 24*60*60*1000;
-  return Math.floor((Date.UTC(b.getFullYear(),b.getMonth(),b.getDate()) - Date.UTC(a.getFullYear(),a.getMonth(),a.getDate()))/ms);
-}
-
-function seedFromString(str){
-  // xmur3 + mulberry32-ish
-  let h = 1779033703 ^ str.length;
-  for (let i=0;i<str.length;i++){
-    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
-    h = (h << 13) | (h >>> 19);
-  }
-  return function(){
-    h = Math.imul(h ^ (h >>> 16), 2246822507);
-    h = Math.imul(h ^ (h >>> 13), 3266489909);
-    h ^= h >>> 16;
-    return h >>> 0;
+  const LS = {
+    streak: "thw_streak_v1",
+    completed: "thw_completed_v1",
+    progressPrefix: "thw_progress_v1:", // + verseKey
   };
-}
-function mulberry32(seed){
-  return function(){
-    let t = seed += 0x6D2B79F5;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+
+  const els = {
+    navHome: document.getElementById("navHome"),
+    navDaily: document.getElementById("navDaily"),
+    navPick: document.getElementById("navPick"),
+    navVerses: document.getElementById("navVerses"),
+    viewHome: document.getElementById("viewHome"),
+    viewPick: document.getElementById("viewPick"),
+    viewVerses: document.getElementById("viewVerses"),
+    viewGame: document.getElementById("viewGame"),
+    streakHome: document.getElementById("streakHome"),
+    completedHome: document.getElementById("completedHome"),
+    homeDaily: document.getElementById("homeDaily"),
+    homePick: document.getElementById("homePick"),
+    todayRef: document.getElementById("todayRef"),
+    todayText: document.getElementById("todayText"),
+    healthVersion: document.getElementById("healthVersion"),
+    healthVerses: document.getElementById("healthVerses"),
+    healthStatus: document.getElementById("healthStatus"),
+    pickSearch: document.getElementById("pickSearch"),
+    pickList: document.getElementById("pickList"),
+    myList: document.getElementById("myList"),
+    gameRef: document.getElementById("gameRef"),
+    gameMode: document.getElementById("gameMode"),
+    streakGame: document.getElementById("streakGame"),
+    verseBox: document.getElementById("verseBox"),
+    pillRow: document.getElementById("pillRow"),
+    btnHint: document.getElementById("btnHint"),
+    btnResetStep: document.getElementById("btnResetStep"),
+    btnStartOver: document.getElementById("btnStartOver"),
+    stepLabel: document.getElementById("stepLabel"),
   };
-}
-function shuffle(arr, rnd){
-  const a = arr.slice();
-  for (let i=a.length-1;i>0;i--){
-    const j = Math.floor(rnd()*(i+1));
-    [a[i], a[j]] = [a[j], a[i]];
+
+  let todayVerse = null;
+  let library = [];
+  let state = null;
+
+  function escapeHTML(s) {
+    return String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
   }
-  return a;
-}
-function choice(arr, rnd){
-  return arr[Math.floor(rnd()*arr.length)];
-}
 
-function safeJSONParse(s, fallback){
-  try{
-    const v = JSON.parse(s);
-    return (v === null || v === undefined) ? fallback : v;
-  } catch {
-    return fallback;
+  function todayISO() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
   }
-}
 
-function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
-function loadLS(key, fallback){ return safeJSONParse(localStorage.getItem(key), fallback); }
-
-// ---------- Verse tokenization & rendering ----------
-function tokenize(text){
-  // Tokens: words (letters/digits with optional apostrophe), or punctuation.
-  // Keeps punctuation as separate tokens, so blanks don't eat commas/colons.
-  const re = /([A-Za-z0-9]+(?:['’][A-Za-z0-9]+)?)|([^\w\s])/g;
-  const out = [];
-  let m;
-  while ((m = re.exec(text)) !== null){
-    if (m[1]) out.push({type:"word", raw:m[1]});
-    else if (m[2]) out.push({type:"punc", raw:m[2]});
-  }
-  // also keep spaces by reconstructing from original? We'll render with spaces between
-  // words and punctuation rules.
-  return out;
-}
-
-function joinTokens(tokens, renderWord){
-  // Render with good spacing:
-  // - space between word-word, word-(opening quote?) etc
-  // - no space before punctuation like , . : ; ? ! )
-  // - no space after opening punctuation like (
-  const noSpaceBefore = new Set([",",".",":",";","?","!","’","'"]);
-  const noSpaceAfter = new Set(["(","[","{","“","‘"]);
-  let html = "";
-  for (let i=0;i<tokens.length;i++){
-    const t = tokens[i];
-    const prev = tokens[i-1];
-    const prevRaw = prev?.raw;
-    const raw = t.raw;
-
-    const needSpace =
-      i>0 &&
-      prev &&
-      !noSpaceAfter.has(prevRaw) &&
-      !noSpaceBefore.has(raw);
-
-    if (needSpace) html += " ";
-
-    if (t.type === "word"){
-      html += renderWord(i, t.raw);
-    } else {
-      html += `<span class="punc">${escapeHTML(raw)}</span>`;
+  function loadLS(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch {
+      return fallback;
     }
   }
-  return html;
-}
-
-function escapeHTML(s){
-  return s.replaceAll("&","&amp;")
-          .replaceAll("<","&lt;")
-          .replaceAll(">","&gt;")
-          .replaceAll('"',"&quot;");
-}
-
-function getWordTokenIndices(tokens){
-  const idxs = [];
-  for (let i=0;i<tokens.length;i++){
-    if (tokens[i].type === "word") idxs.push(i);
+  function saveLS(key, val) {
+    localStorage.setItem(key, JSON.stringify(val));
   }
-  return idxs;
-}
 
+  function getVerseKey(v) {
+    return v.ref + "|" + v.text.slice(0, 40);
+  }
 
-async function tryLoadBibleIndex(){
-  // Optional file produced by tools/build script:
-  // data/bible/index.json
-  try{
-    const url = new URL("./data/bible/index.json", window.location.href);
-    const res = await fetch(url.toString(), { cache:"no-store" });
-    if (!res.ok) return null;
-    BIBLE_INDEX = await res.json();
-    return BIBLE_INDEX;
-  } catch {
+  function normalizeTokens(text) {
+    const parts = [];
+    const re = /[A-Za-z']+|\d+|[^\sA-Za-z0-9]+/g;
+    const m = text.match(re) || [];
+    for (const p of m) parts.push(p);
+    return parts;
+  }
+  function isWordToken(t) {
+    return /^[A-Za-z']+$/.test(t) || /^\d+$/.test(t);
+  }
+
+  function pickDaily(dateStr) {
+    if (!library.length) return null;
+    let h = 2166136261;
+    for (let i = 0; i < dateStr.length; i++) {
+      h ^= dateStr.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    const idx = Math.abs(h) % library.length;
+    return library[idx];
+  }
+
+  function setActiveNav(btn) {
+    for (const b of [els.navHome, els.navDaily, els.navPick, els.navVerses]) {
+      b.classList.toggle("isActive", b === btn);
+    }
+  }
+  function showView(name) {
+    els.viewHome.hidden = name !== "home";
+    els.viewPick.hidden = name !== "pick";
+    els.viewVerses.hidden = name !== "verses";
+    els.viewGame.hidden = name !== "game";
+  }
+
+  function getStreak() {
+    const s = loadLS(LS.streak, { currentStreak: 0, lastCompleted: null });
+    if (!s || typeof s !== "object") return { currentStreak: 0, lastCompleted: null };
+    return {
+      currentStreak: Number.isFinite(+s.currentStreak) ? +s.currentStreak : 0,
+      lastCompleted: typeof s.lastCompleted === "string" ? s.lastCompleted : null,
+    };
+  }
+
+  function setStreakOnComplete(dateStr) {
+    const s = getStreak();
+    if (s.lastCompleted === dateStr) return;
+
+    const d = new Date(dateStr + "T00:00:00");
+    const y = new Date(d);
+    y.setDate(y.getDate() - 1);
+    const yStr = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, "0")}-${String(
+      y.getDate()
+    ).padStart(2, "0")}`;
+
+    const next = s.lastCompleted === yStr ? s.currentStreak + 1 : 1;
+    saveLS(LS.streak, { currentStreak: next, lastCompleted: dateStr });
+  }
+
+  function getCompletedList() {
+    const items = loadLS(LS.completed, []);
+    return Array.isArray(items) ? items : [];
+  }
+  function addCompleted(verse) {
+    const items = getCompletedList();
+    const key = getVerseKey(verse);
+    if (!items.some((x) => x.key === key)) {
+      items.push({ key, ref: verse.ref, text: verse.text, at: new Date().toISOString() });
+      saveLS(LS.completed, items);
+    }
+  }
+
+  function renderStats() {
+    const s = getStreak();
+    els.streakHome.textContent = String(s.currentStreak);
+    els.streakGame.textContent = String(s.currentStreak);
+    els.completedHome.textContent = String(getCompletedList().length);
+  }
+
+  async function loadVerses() {
+    const url = new URL("data/verses.json", window.location.href);
+    const res = await fetch(url.toString(), { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status} loading ${url}`);
+    const data = await res.json();
+    if (!data || !Array.isArray(data.verses)) throw new Error("verses.json missing verses[]");
+    library = data.verses;
+    return library.length;
+  }
+
+  function renderToday() {
+    if (!todayVerse) return;
+    els.todayRef.textContent = todayVerse.ref;
+    els.todayText.textContent = todayVerse.text;
+  }
+
+  function renderPickList(filter = "") {
+    const q = filter.trim().toLowerCase();
+    const items = !q ? library : library.filter((v) => (v.ref + " " + v.text).toLowerCase().includes(q));
+    if (!items.length) {
+      els.pickList.innerHTML = `<div class="empty">No results.</div>`;
+      return;
+    }
+    els.pickList.innerHTML = items
+      .slice(0, 200)
+      .map(
+        (v) => `
+      <button class="itemBtn" type="button" data-ref="${escapeHTML(v.ref)}">
+        <div class="itemRef">${escapeHTML(v.ref)}</div>
+        <div class="itemText">${escapeHTML(v.text)}</div>
+      </button>
+    `
+      )
+      .join("");
+    els.pickList.querySelectorAll(".itemBtn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const ref = btn.getAttribute("data-ref");
+        const verse = library.find((x) => x.ref === ref);
+        if (verse) startGame(verse, "pick");
+      });
+    });
+  }
+
+  function renderMyVerses() {
+    const items = getCompletedList().slice().reverse();
+    if (!items.length) {
+      els.myList.innerHTML = `<div class="empty">No completed verses yet. Finish a verse and it will show up here.</div>`;
+      return;
+    }
+    els.myList.innerHTML = items
+      .map(
+        (v) => `
+      <button class="itemBtn" type="button" data-key="${escapeHTML(v.key)}">
+        <div class="itemRef">${escapeHTML(v.ref)}</div>
+        <div class="itemText">${escapeHTML(v.text)}</div>
+      </button>
+    `
+      )
+      .join("");
+    els.myList.querySelectorAll(".itemBtn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.getAttribute("data-key");
+        const found = items.find((x) => x.key === key);
+        if (found) startGame({ ref: found.ref, text: found.text }, "pick");
+      });
+    });
+  }
+
+  function initState(verse, mode) {
+    const tokens = normalizeTokens(verse.text);
+    const wordIdx = tokens.map((t, i) => (isWordToken(t) ? i : -1)).filter((i) => i >= 0);
+
+    const seedStr = verse.ref + "|" + verse.text.length;
+    let h = 0;
+    for (let i = 0; i < seedStr.length; i++) h = (h * 31 + seedStr.charCodeAt(i)) >>> 0;
+
+    const shuffled = wordIdx.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      h = (h * 1664525 + 1013904223) >>> 0;
+      const j = h % (i + 1);
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    return {
+      verse,
+      key: getVerseKey(verse),
+      mode,
+      tokens,
+      hiddenIdx: shuffled,
+      step: 1,
+      revealed: new Set(),
+      locked: false,
+    };
+  }
+
+  function saveProgress() {
+    if (!state) return;
+    saveLS(LS.progressPrefix + state.key, {
+      mode: state.mode,
+      verse: state.verse,
+      step: state.step,
+      revealed: Array.from(state.revealed),
+    });
+  }
+  function loadProgress(verse) {
+    const key = getVerseKey(verse);
+    const payload = loadLS(LS.progressPrefix + key, null);
+    if (!payload || typeof payload !== "object") return null;
+    if (!payload.verse || payload.verse.ref !== verse.ref) return null;
+    return payload;
+  }
+  function clearProgress(verse) {
+    localStorage.removeItem(LS.progressPrefix + getVerseKey(verse));
+  }
+
+  function startGame(verse, mode) {
+    const existing = loadProgress(verse);
+    state = initState(verse, mode);
+    if (existing) {
+      state.step = Math.max(1, Math.min(state.hiddenIdx.length, +existing.step || 1));
+      state.revealed = new Set((existing.revealed || []).filter((n) => Number.isInteger(n)));
+    }
+    els.gameRef.textContent = verse.ref;
+    els.gameMode.textContent = mode === "daily" ? `Today: ${todayISO()}` : "Practice (doesn't affect streak)";
+    renderStats();
+    showView("game");
+    setActiveNav(mode === "daily" ? els.navDaily : els.navPick);
+    renderGame();
+  }
+
+  function currentHiddenSlice() {
+    const n = Math.min(state.step, state.hiddenIdx.length);
+    return state.hiddenIdx.slice(0, n);
+  }
+
+  function renderVerseWithBlanks() {
+    const hideSet = new Set(currentHiddenSlice());
+    const parts = state.tokens.map((t, i) => {
+      if (hideSet.has(i) && !state.revealed.has(i)) return `<span class="blank">____</span>`;
+      return escapeHTML(t);
+    });
+    let s = parts.join(" ");
+    s = s
+      .replaceAll(" ,", ",")
+      .replaceAll(" .", ".")
+      .replaceAll(" ;", ";")
+      .replaceAll(" :", ":")
+      .replaceAll(" !", "!")
+      .replaceAll(" ?", "?")
+      .replaceAll(" )", ")")
+      .replaceAll("( ", "(");
+    return s;
+  }
+
+  function nextExpectedIndex() {
+    const slice = currentHiddenSlice();
+    for (const idx of slice) if (!state.revealed.has(idx)) return idx;
     return null;
   }
-}
 
-function openBiblePicker(){
-  if (!els.bibleModal) return;
-  // Populate book list
-  els.bookSelect.innerHTML = "";
-  if (!BIBLE_INDEX?.books?.length){
-    // Minimal fallback list (still allows typing book name later if you extend UI)
-    const opt = document.createElement("option");
-    opt.value = "";
-    opt.textContent = "Bible data not found";
-    els.bookSelect.appendChild(opt);
-    els.bookSelect.disabled = true;
-    els.loadVerseBtn.disabled = true;
-    els.bibleHelp.textContent = "Bible data files were not found. Run the build script in tools/ and deploy again.";
-  } else {
-    els.bookSelect.disabled = false;
-    els.loadVerseBtn.disabled = false;
-    for (const b of BIBLE_INDEX.books){
-      const opt = document.createElement("option");
-      opt.value = b.id;
-      opt.textContent = b.name;
-      els.bookSelect.appendChild(opt);
+  function buildPills() {
+    const slice = currentHiddenSlice();
+    const remaining = slice.filter((i) => !state.revealed.has(i));
+    if (!remaining.length) return null;
+
+    const correctIdx = nextExpectedIndex();
+    const correctWord = state.tokens[correctIdx];
+
+    const wordTokens = state.tokens.filter(isWordToken);
+    const choices = new Set([correctWord]);
+    let guard = 0;
+    while (choices.size < Math.min(5, wordTokens.length) && guard < 200) {
+      guard++;
+      const w = wordTokens[Math.floor(Math.random() * wordTokens.length)];
+      choices.add(w);
     }
-    els.bibleHelp.textContent = "Pick a verse and open it in practice mode. (Does not affect streak.)";
+    const arr = Array.from(choices);
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return { correctWord, correctIdx, pills: arr };
   }
 
-  els.chapterInput.value = 1;
-  els.verseInput.value = 1;
-  els.pickerPreview.hidden = true;
-  openModal(els.bibleModal);
-}
+  function renderGame() {
+    if (!state) return;
 
-async function loadAnyVerse(bookId, chapterNum, verseNum){
-  // Expects files like:
-  // data/bible/<bookId>/<chapter>.json
-  // Each chapter json: { "book":"Genesis", "chapter":1, "verses":[{"n":1,"t":"In the beginning ..."}, ...] }
-  const url = new URL(`./data/bible/${bookId}/${chapterNum}.json`, window.location.href);
-  const res = await fetch(url.toString(), { cache:"no-store" });
-  if (!res.ok) throw new Error(`HTTP ${res.status} loading ${url}`);
-  const chapter = await res.json();
-  const v = (chapter.verses || []).find(x => Number(x.n) === Number(verseNum));
-  if (!v) throw new Error(`Verse not found: ${bookId} ${chapterNum}:${verseNum}`);
-  const refName = BIBLE_INDEX?.books?.find(b => b.id === bookId)?.name || bookId;
-  return { ref: `${refName} ${chapterNum}:${verseNum}`, text: v.t };
-}
+    els.stepLabel.textContent = `Step ${state.step} of ${state.hiddenIdx.length}`;
+    els.verseBox.innerHTML = renderVerseWithBlanks();
 
-
-// ---------- Step plan ----------
-function buildStepPlan(verse, dateKey){
-  const tokens = tokenize(verse.text);
-  const wordTokenIdxs = getWordTokenIndices(tokens);
-
-  const seedFn = seedFromString(`${dateKey}|${verse.ref}|${verse.text.length}`);
-  const rnd = mulberry32(seedFn());
-
-  // Rank candidate words: prefer longer, non-stopwords first.
-  const candidates = wordTokenIdxs.map((ti, order) => {
-    const w = tokens[ti].raw;
-    const lower = w.toLowerCase();
-    const isStop = STOPWORDS.has(lower);
-    const len = w.length;
-    // score: long words > short, stopwords later
-    const score = (isStop ? 0 : 1000) + len*10 + rnd(); // rnd breaks ties
-    return { tokenIndex: ti, word: w, lower, score };
-  });
-
-  candidates.sort((a,b)=> b.score - a.score);
-
-  const totalWords = wordTokenIdxs.length;
-  const maxStep = totalWords; // you asked: up to the entire verse
-
-  // stepBlanks[k] = array of tokenIndices blanked at step k (1-based)
-  const stepBlanks = [];
-  const picked = [];
-  for (let k=1;k<=maxStep;k++){
-    // pick the next best candidate not already picked
-    const next = candidates[k-1];
-    picked.push(next.tokenIndex);
-    const blanks = picked.slice().sort((a,b)=>a-b);
-    stepBlanks.push(blanks);
-  }
-
-  return { tokens, wordTokenIdxs, maxStep, stepBlanks };
-}
-
-function initStateForVerse(verse, dateKey, mode){
-  const plan = buildStepPlan(verse, dateKey);
-  const seedFn = seedFromString(`pills|${dateKey}|${verse.ref}`);
-  const rnd = mulberry32(seedFn());
-
-  return {
-    mode, // "daily" or "practice"
-    dateKey,
-    verseId: verse.ref, // simple id
-    verse,
-    plan,
-    step: 1,
-    filled: {}, // tokenIndex -> word
-    nextBlankCursor: 0, // within current blanks list
-    hintsUsed: 0,
-    completed: false,
-    rndSeed: seedFn(), // stable for pill shuffles
-    rndOffset: 0,
-  };
-}
-
-function progressKey(state){
-  if (state.mode === "daily") return `${LS.progressPrefix}${state.dateKey}`;
-  return `${LS.progressPrefix}practice:${state.verseId}`;
-}
-
-function saveProgress(){
-  if (!current) return;
-  const payload = {
-    mode: current.mode,
-    dateKey: current.dateKey,
-    verseId: current.verseId,
-    step: current.step,
-    filled: current.filled,
-    nextBlankCursor: current.nextBlankCursor,
-    hintsUsed: current.hintsUsed,
-    completed: current.completed,
-  };
-  saveLS(progressKey(current), payload);
-}
-
-function loadProgressFor(state){
-  const payload = loadLS(progressKey(state), null);
-  if (!payload) return state;
-  // only trust progress if same verse
-  if (payload.verseId !== state.verseId) return state;
-
-  state.step = clamp(payload.step ?? 1, 1, state.plan.maxStep);
-  state.filled = payload.filled ?? {};
-  state.nextBlankCursor = payload.nextBlankCursor ?? 0;
-  state.hintsUsed = payload.hintsUsed ?? 0;
-  state.completed = !!payload.completed;
-  return state;
-}
-
-// ---------- Daily verse selection ----------
-function getDailyVerse(todayKey){
-  const start = VERSE_DATA.startDate;
-  const verses = VERSE_DATA.verses;
-  const idx = ((daysBetween(start, todayKey) % verses.length) + verses.length) % verses.length;
-  return { verse: verses[idx], index: idx };
-}
-
-// ---------- Rendering ----------
-function setModeBadge(){
-  els.modeBadge.textContent = current.mode === "daily" ? "Daily" : "Practice";
-}
-
-function renderVerse(){
-  const { tokens } = current.plan;
-  const blanks = current.plan.stepBlanks[current.step - 1];
-  // Next blank order is left-to-right (sorted)
-  const nextBlankIndex = blanks[current.nextBlankCursor];
-
-  const html = joinTokens(tokens, (tokenIndex, word) => {
-    if (blanks.includes(tokenIndex)){
-      const filledWord = current.filled[tokenIndex];
-      if (filledWord){
-        return `<span class="filled">${escapeHTML(filledWord)}</span>`;
-      } else {
-        // show a friendly blank bubble
-        const isNext = tokenIndex === nextBlankIndex;
-        const label = isNext ? "next blank" : "blank";
-        return `<span class="blank" data-token="${tokenIndex}" aria-label="${label}">_____</span>`;
+    const expected = nextExpectedIndex();
+    if (expected === null) {
+      if (state.step >= state.hiddenIdx.length) {
+        els.pillRow.innerHTML = "";
+        els.stepLabel.textContent = "Complete 🎉";
+        onVerseComplete();
+        return;
       }
-    }
-    return `<span class="word">${escapeHTML(word)}</span>`;
-  });
-
-  els.verseText.innerHTML = html;
-}
-
-function renderProgress(){
-  els.progressLabel.textContent = current.completed
-    ? "Completed today 🎉"
-    : `Step ${current.step} of ${current.plan.maxStep}`;
-
-  const maxDots = Math.min(current.plan.maxStep, 12);
-  els.progressDots.innerHTML = "";
-  for (let i=1;i<=maxDots;i++){
-    const d = document.createElement("div");
-    d.className = "dot" + (i <= Math.ceil((current.step/current.plan.maxStep)*maxDots) ? " on" : "");
-    els.progressDots.appendChild(d);
-  }
-}
-
-function rndForPills(){
-  // deterministic but changes a bit as you advance
-  const base = current.rndSeed + current.step*1337 + current.rndOffset*17;
-  return mulberry32(base >>> 0);
-}
-
-function nextRequiredWord(){
-  const blanks = current.plan.stepBlanks[current.step - 1];
-  const tokenIndex = blanks[current.nextBlankCursor];
-  if (tokenIndex == null) return null;
-  return current.plan.tokens[tokenIndex].raw;
-}
-
-function buildPillWords(){
-  // Always include the correct next word.
-  const correct = nextRequiredWord();
-  if (!correct) return [];
-
-  const rnd = rndForPills();
-  const tokens = current.plan.tokens;
-
-  // Candidate decoys: other words in verse that are not the correct one and not already filled.
-  const used = new Set([correct.toLowerCase()]);
-  const decoys = [];
-
-  // Pull from verse first
-  const verseWords = current.plan.wordTokenIdxs
-    .map(i => tokens[i].raw)
-    .filter(w => w && w.toLowerCase() !== correct.toLowerCase());
-
-  const shuffled = shuffle(verseWords, rnd);
-  for (const w of shuffled){
-    const lw = w.toLowerCase();
-    if (used.has(lw)) continue;
-    used.add(lw);
-    decoys.push(w);
-    if (decoys.length >= 3) break;
-  }
-
-  // If still short, add some gentle common decoys
-  const commons = ["the","and","of","to","in","that","unto","shall","hath","ye"];
-  const shuffledC = shuffle(commons, rnd);
-  for (const w of shuffledC){
-    if (used.has(w)) continue;
-    used.add(w);
-    decoys.push(w);
-    if (decoys.length >= 4) break;
-  }
-
-  const all = [correct, ...decoys.slice(0,4)];
-  return shuffle(all, rnd);
-}
-
-function renderPills(){
-  els.pills.innerHTML = "";
-  const words = buildPillWords();
-
-  // If completed, no pills
-  if (current.completed){
-    els.pillsLabel = "Done!";
-    return;
-  }
-
-  for (const w of words){
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "pill";
-    btn.textContent = w;
-    btn.addEventListener("click", () => onPillClick(btn, w));
-    els.pills.appendChild(btn);
-  }
-}
-
-function setEncouragement(text=null){
-  const msg = text ?? choice(ENCOURAGEMENTS, rndForPills());
-  els.encourageText.textContent = msg;
-}
-
-// ---------- Game actions ----------
-function markCompletedIfDone(){
-  if (current.step !== current.plan.maxStep) return false;
-
-  const blanks = current.plan.stepBlanks[current.step - 1];
-  for (const t of blanks){
-    if (!current.filled[t]) return false;
-  }
-
-  current.completed = true;
-  saveProgress();
-
-  if (current.mode === "daily"){
-    // Add to completed list (idempotent for the day)
-    const completed = loadLS(LS.completed, []);
-    const existing = completed.find(x => x.dateKey === current.dateKey);
-    if (!existing){
-      completed.unshift({
-        dateKey: current.dateKey,
-        ref: current.verse.ref,
-        text: current.verse.text,
-        hintsUsed: current.hintsUsed
-      });
-      saveLS(LS.completed, completed);
-    }
-    updateStreakOnCompletion(current.dateKey);
-  }
-
-  renderAll();
-  setEncouragement("Completed! Let it sit in your mind for a moment. ✨");
-  return true;
-}
-
-function advanceStepIfStepDone(){
-  const blanks = current.plan.stepBlanks[current.step - 1];
-  // Find first unfilled blank cursor
-  let cursor = 0;
-  while (cursor < blanks.length && current.filled[blanks[cursor]]) cursor++;
-  current.nextBlankCursor = cursor;
-
-  if (cursor >= blanks.length){
-    // Step complete
-    if (current.step < current.plan.maxStep){
-      current.step++;
-      current.nextBlankCursor = 0;
-      // Keep existing filled words (they remain filled in later steps)
-      current.rndOffset++;
+      state.step += 1;
       saveProgress();
-      renderAll();
-      setEncouragement();
-    } else {
-      markCompletedIfDone();
+      renderGame();
+      return;
     }
-  } else {
+
+    const built = buildPills();
+    if (!built) return;
+    const { correctWord, correctIdx, pills } = built;
+
+    els.pillRow.innerHTML = pills
+      .map(
+        (w) => `
+      <button class="pill" type="button" data-word="${escapeHTML(w)}">${escapeHTML(w)}</button>
+    `
+      )
+      .join("");
+
+    els.pillRow.querySelectorAll(".pill").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (state.locked) return;
+        state.locked = true;
+
+        const w = btn.getAttribute("data-word") || "";
+        const ok = w === correctWord;
+        btn.classList.add(ok ? "good" : "bad");
+
+        if (ok) {
+          state.revealed.add(correctIdx);
+          saveProgress();
+          setTimeout(() => {
+            state.locked = false;
+            renderGame();
+          }, 180);
+        } else {
+          setTimeout(() => {
+            btn.classList.remove("bad");
+            state.locked = false;
+          }, 420);
+        }
+      });
+    });
+  }
+
+  function hintNext() {
+    if (!state) return;
+    const idx = nextExpectedIndex();
+    if (idx === null) return;
+    state.revealed.add(idx);
     saveProgress();
-    renderAll();
+    renderGame();
   }
-}
 
-function onPillClick(btn, word){
-  if (current.completed) return;
-
-  const correct = nextRequiredWord();
-  if (!correct) return;
-
-  if (word.toLowerCase() === correct.toLowerCase()){
-    btn.classList.remove("wrong");
-    btn.classList.add("correct");
-    setTimeout(()=>btn.classList.remove("correct"), 800);
-
-    // Fill the next blank
-    const blanks = current.plan.stepBlanks[current.step - 1];
-    const tokenIndex = blanks[current.nextBlankCursor];
-    current.filled[tokenIndex] = correct;
-
-    // Move cursor forward
-    current.nextBlankCursor++;
+  function resetStep() {
+    if (!state) return;
+    const slice = currentHiddenSlice();
+    for (const idx of slice) state.revealed.delete(idx);
     saveProgress();
-
-    // re-render (shows word pop-in)
-    renderAll();
-
-    // if step done, move forward
-    advanceStepIfStepDone();
-  } else {
-    btn.classList.remove("correct");
-    btn.classList.add("wrong");
-    setTimeout(()=>btn.classList.remove("wrong"), 800);
-    setEncouragement("Close! Try a different word.");
+    renderGame();
   }
-}
 
-function onHint(){
-  if (current.completed) return;
-  const correct = nextRequiredWord();
-  if (!correct) return;
-
-  current.hintsUsed++;
-  // Fill directly without needing click
-  const blanks = current.plan.stepBlanks[current.step - 1];
-  const tokenIndex = blanks[current.nextBlankCursor];
-  current.filled[tokenIndex] = correct;
-  current.nextBlankCursor++;
-  saveProgress();
-  renderAll();
-  setEncouragement("Hint used — nice. Now keep going.");
-  advanceStepIfStepDone();
-}
-
-function resetStep(){
-  if (!current) return;
-  const blanks = current.plan.stepBlanks[current.step - 1];
-  for (const t of blanks){
-    delete current.filled[t];
+  function startOver() {
+    if (!state) return;
+    state.step = 1;
+    state.revealed.clear();
+    clearProgress(state.verse);
+    saveProgress();
+    renderGame();
   }
-  current.nextBlankCursor = 0;
-  current.completed = false;
-  current.rndOffset++;
-  saveProgress();
-  renderAll();
-  setEncouragement("Step reset. No worries — go again.");
-}
 
-function startOver(){
-  if (!current) return;
-  current.step = 1;
-  current.filled = {};
-  current.nextBlankCursor = 0;
-  current.hintsUsed = 0;
-  current.completed = false;
-  current.rndOffset++;
-  saveProgress();
-  renderAll();
-  setEncouragement("Fresh start. One word at a time.");
-}
+  function onVerseComplete() {
+    addCompleted(state.verse);
+    if (state.mode === "daily") setStreakOnComplete(todayISO());
+    renderStats();
+  }
 
-// ---------- Completed list / Modals ----------
-
-function renderCompletedList(){
-  const completed = loadLS(LS.completed, []);
-  els.completedList.innerHTML = "";
-
-  els.emptyState.hidden = completed.length !== 0;
-
-  for (const item of completed){
-    const row = document.createElement("div");
-    row.className = "rowItem";
-
-    const left = document.createElement("div");
-    left.className = "rowLeft";
-    left.innerHTML = `
-      <div class="rowRef">${escapeHTML(item.ref)}</div>
-      <div class="rowMeta">Completed: ${escapeHTML(item.dateKey)} • Hints used: ${item.hintsUsed ?? 0}</div>
-    `;
-
-    const btns = document.createElement("div");
-    btns.className = "rowBtns";
-
-    const viewBtn = document.createElement("button");
-    viewBtn.type = "button";
-    viewBtn.className = "smallBtn";
-    viewBtn.textContent = "View";
-    viewBtn.addEventListener("click", () => {
-      alert(`${item.ref}\n\n${item.text}\n\nCompleted: ${item.dateKey}`);
+  function wire() {
+    els.navHome.addEventListener("click", () => {
+      setActiveNav(els.navHome);
+      showView("home");
+      renderStats();
+      renderToday();
+    });
+    els.navDaily.addEventListener("click", () => {
+      if (todayVerse) startGame(todayVerse, "daily");
+    });
+    els.navPick.addEventListener("click", () => {
+      setActiveNav(els.navPick);
+      showView("pick");
+      renderPickList(els.pickSearch.value || "");
+    });
+    els.navVerses.addEventListener("click", () => {
+      setActiveNav(els.navVerses);
+      showView("verses");
+      renderMyVerses();
     });
 
-    const practiceBtn = document.createElement("button");
-    practiceBtn.type = "button";
-    practiceBtn.className = "smallBtn primary";
-    practiceBtn.textContent = "Practice";
-    practiceBtn.addEventListener("click", () => {
-      closeModal(els.myVersesModal);
-      loadPracticeVerse({ref:item.ref, text:item.text});
+    els.homeDaily.addEventListener("click", () => {
+      setActiveNav(els.navDaily);
+      if (todayVerse) startGame(todayVerse, "daily");
+    });
+    els.homePick.addEventListener("click", () => {
+      setActiveNav(els.navPick);
+      showView("pick");
+      renderPickList("");
+      els.pickSearch.focus();
     });
 
-    btns.appendChild(viewBtn);
-    btns.appendChild(practiceBtn);
-
-    row.appendChild(left);
-    row.appendChild(btns);
-    els.completedList.appendChild(row);
-  }
-}
-
-function openMyVerses(){
-  showVersesView();
-}
-
-function buildPracticeList(filterText=""){
-  const q = filterText.trim().toLowerCase();
-  const verses = VERSE_DATA.verses;
-  const list = [];
-
-  for (const v of verses){
-    const hay = (v.ref + " " + v.text).toLowerCase();
-    if (!q || hay.includes(q)) list.push(v);
-  }
-  return list;
-}
-
-function renderPracticePicker(){
-  els.practiceList.innerHTML = "";
-  const verses = buildPracticeList(els.practiceSearch.value ?? "");
-  for (const v of verses){
-    const row = document.createElement("div");
-    row.className = "rowItem";
-
-    const left = document.createElement("div");
-    left.className = "rowLeft";
-    left.innerHTML = `
-      <div class="rowRef">${escapeHTML(v.ref)}</div>
-      <div class="rowMeta">${escapeHTML(v.text.slice(0, 90))}${v.text.length>90 ? "…" : ""}</div>
-    `;
-
-    const btns = document.createElement("div");
-    btns.className = "rowBtns";
-
-    const pickBtn = document.createElement("button");
-    pickBtn.type = "button";
-    pickBtn.className = "smallBtn primary";
-    pickBtn.textContent = "Open";
-    pickBtn.addEventListener("click", () => {
-      closeModal(els.practiceModal);
-      loadPracticeVerse(v);
+    els.pickSearch.addEventListener("input", () => {
+      renderPickList(els.pickSearch.value || "");
     });
 
-    btns.appendChild(pickBtn);
-    row.appendChild(left);
-    row.appendChild(btns);
-    els.practiceList.appendChild(row);
-  }
-}
-
-function openPracticePicker(){
-  showPickView();
-}
-
-function loadPracticeVerse(verse){
-  showGameView();
-  const dateKey = `practice-${todayISO()}`; // stable enough for plan seed; not used for streak
-  current = initStateForVerse(verse, dateKey, "practice");
-  current = loadProgressFor(current);
-  saveLS(LS.lastMode, { mode:"practice", verseId: verse.ref, verseText: verse.text });
-  renderAll();
-}
-
-// ---------- Streak ----------
-function getYesterdayISO(todayKey){
-  const d = parseISO(todayKey);
-  d.setDate(d.getDate()-1);
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,"0");
-  const day = String(d.getDate()).padStart(2,"0");
-  return `${y}-${m}-${day}`;
-}
-
-function updateStreakOnCompletion(dateKey){
-  const s = loadLS(LS.streak, { currentStreak:0, lastCompletedDate:null });
-
-  if (s.lastCompletedDate === dateKey){
-    // already counted today
-    saveLS(LS.streak, s);
-    renderStreak();
-    return;
+    els.btnHint.addEventListener("click", hintNext);
+    els.btnResetStep.addEventListener("click", resetStep);
+    els.btnStartOver.addEventListener("click", startOver);
   }
 
-  const yest = getYesterdayISO(dateKey);
-  if (s.lastCompletedDate === yest){
-    s.currentStreak = (s.currentStreak || 0) + 1;
-  } else {
-    s.currentStreak = 1;
-  }
-  s.lastCompletedDate = dateKey;
+  async function boot() {
+    const stamp =
+      window.__THW_BUILD__ && typeof window.__THW_BUILD__ === "object"
+        ? window.__THW_BUILD__
+        : { version: "?", built: "?" };
+    els.healthVersion.textContent = `${stamp.version} · built ${stamp.built}`;
 
-  saveLS(LS.streak, s);
-  renderStreak();
-}
-
-function renderStreak(){
-  const s = loadLS(LS.streak, { currentStreak:0, lastCompletedDate:null });
-  els.streakCount.textContent = String(s.currentStreak || 0);
-}
-
-function showHomeView(){
-  els.homeView.hidden = false;
-  els.pickView.hidden = true;
-  els.versesView.hidden = true;
-  els.gameView.style.display = "none";
-}
-
-function showPickView(){
-  els.homeView.hidden = true;
-  els.pickView.hidden = false;
-  els.versesView.hidden = true;
-  els.gameView.style.display = "none";
-  renderPracticePicker();
-}
-
-function showVersesView(){
-  els.homeView.hidden = true;
-  els.pickView.hidden = true;
-  els.versesView.hidden = false;
-  els.gameView.style.display = "none";
-  renderMyVersesInline();
-}
-
-function showGameView(){
-  els.homeView.hidden = true;
-  els.pickView.hidden = true;
-  els.versesView.hidden = true;
-  els.gameView.style.display = "block";
-}
-
-function renderHome(){
-  if (!VERSE_DATA) return;
-  const todayKey = todayISO();
-  const { verse } = getDailyVerse(todayKey);
-  els.homeTodayRef.textContent = verse.ref;
-  els.homeTodayText.textContent = verse.text;
-
-  const s = loadLS(LS.streak, { currentStreak:0, lastCompletedDate:null });
-  const streak = (s && typeof s === "object" && Number.isFinite(Number(s.currentStreak))) ? Number(s.currentStreak) : 0;
-  els.streakCountHome.textContent = String(streak);
-
-  const completed = loadLS(LS.completed, []);
-  els.completedCountHome.textContent = String(Array.isArray(completed) ? completed.length : 0);
-}
-
-function renderMyVersesInline(){
-  const completed = loadLS(LS.completed, []);
-  const items = Array.isArray(completed) ? completed : [];
-  if (!els.myVersesList) return;
-  if (!items.length){
-    els.myVersesList.innerHTML = `<div class="empty">No completed verses yet. Finish a verse and it will show up here.</div>`;
-    return;
-  }
-  els.myVersesList.innerHTML = items.slice().reverse().map(v => (
-    `<button class="verseItem" type="button" data-ref="${escapeHTML(v.ref)}">
-      <div class="vref">${escapeHTML(v.ref)}</div>
-      <div class="vtext">${escapeHTML(v.text)}</div>
-    </button>`
-  )).join("");
-  els.myVersesList.querySelectorAll(".verseItem").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const ref = btn.getAttribute("data-ref");
-      const found = items.find(x => x.ref === ref);
-      if (found) loadPracticeVerse(found);
-    });
-  });
-}
-
-// ---------- Main render ----------
-function renderAll(){
-  if (current) showGameView();
-setModeBadge();
-  els.verseRef.textContent = current.verse.ref;
-
-  if (current.mode === "daily"){
-    els.verseDate.textContent = `Today: ${current.dateKey}`;
-  } else {
-    els.verseDate.textContent = `Practice mode (no streak impact)`;
-  }
-
-  renderVerse();
-  renderProgress();
-  renderPills();
-  renderStreak();
-
-  // hint button state
-  els.hintBtn.disabled = current.completed;
-  els.resetStepBtn.disabled = current.completed;
-}
-
-async function loadData(){
-  // Robust path resolution for GitHub Pages subfolders.
-  const url = new URL("./data/verses.json", window.location.href);
-  const res = await fetch(url.toString(), { cache: "no-store" });
-  if (!res.ok) throw new Error(`HTTP ${res.status} loading ${url}`);
-  const txt = await res.text();
-  try{
-    VERSE_DATA = JSON.parse(txt);
-  } catch (e){
-    throw new Error(`Invalid JSON in ${url}: ${e.message}`);
-  }
-}
-
-
-function restoreLastModeOrDaily(){
-  current = null;
-  showHomeView();
-  renderHome();
-}
-
-
-function wireUI(){
-  els.hintBtn.addEventListener("click", onHint);
-  els.resetStepBtn.addEventListener("click", resetStep);
-  els.startOverBtn.addEventListener("click", startOver);
-
-  els.myVersesBtn.addEventListener("click", openMyVerses);
-  els.closeModalBtn.addEventListener("click", () => closeModal(els.myVersesModal));
-  els.closeModalBtn2.addEventListener("click", () => closeModal(els.myVersesModal));
-
-  els.practiceBtn.addEventListener("click", openPracticePicker);
-
-
-  if (els.bibleBtn){
-    els.bibleBtn.addEventListener("click", openBiblePicker);
-  }
-  if (els.loadVerseBtn){
-    els.loadVerseBtn.addEventListener("click", async () => {
-      try{
-        const bookId = els.bookSelect.value;
-        if (!bookId) throw new Error('Bible data not found yet. Generate data/bible files and redeploy.');
-        const chapter = Number(els.chapterInput.value);
-        const verse = Number(els.verseInput.value);
-        const v = await loadAnyVerse(bookId, chapter, verse);
-        closeModal(els.bibleModal);
-        loadPracticeVerse(v);
-      } catch (e){
-        els.bibleHelp.textContent = e.message || String(e);
-      }
-    });
-  }
-
-
-      if (!els.myVersesModal.hidden) closeModal(els.myVersesModal);
-    if (!els.practiceModal.hidden) closeModal(els.practiceModal);
-  });
-
-  // Allow ESC to close modals
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape"){
-      if (els.bibleModal && !els.bibleModal.hidden) closeModal(els.bibleModal);
-      if (!els.myVersesModal.hidden) closeModal(els.myVersesModal);
-      if (!els.practiceModal.hidden) closeModal(els.practiceModal);
+    try {
+      const count = await loadVerses();
+      els.healthVerses.textContent = String(count);
+      els.healthStatus.textContent = "OK";
+      todayVerse = pickDaily(todayISO());
+      renderToday();
+      renderStats();
+      setActiveNav(els.navHome);
+      showView("home");
+      console.log("[THW] boot", stamp, "verses:", count);
+    } catch (err) {
+      els.healthStatus.textContent = "ERROR";
+      els.todayRef.textContent = "Could not load verses";
+      els.todayText.textContent = String(err && err.message ? err.message : err);
+      console.error(err);
     }
-  });
-
-// Top nav
-els.navHome?.addEventListener("click", () => { current = null; showHomeView(); renderHome(); });
-els.navDaily?.addEventListener("click", () => els.goDailyBtn?.click());
-els.navPick?.addEventListener("click", () => showPickView());
-els.navMyVerses?.addEventListener("click", () => showVersesView());
-
-// Home actions
-els.goDailyBtn?.addEventListener("click", () => {
-  const todayKey = todayISO();
-  const { verse } = getDailyVerse(todayKey);
-  current = initStateForVerse(verse, todayKey, "daily");
-  current = loadProgressFor(current);
-  saveLS(LS.lastMode, { mode:"daily" });
-  renderAll();
-  setEncouragement();
-});
-
-els.goPickBtn?.addEventListener("click", () => showPickView());
-els.backHomeBtn?.addEventListener("click", () => { current = null; showHomeView(); renderHome(); });
-els.backHomeBtn2?.addEventListener("click", () => { current = null; showHomeView(); renderHome(); });
-
-}
-
-// ---------- Boot ----------
-(async function(){
-  try{
-    await loadData();
-    await tryLoadBibleIndex();
-    wireUI();
-    restoreLastModeOrDaily();
-  } catch (err){
-    console.error(err);
-    els.verseRef.textContent = "Error";
-    els.verseDate.textContent = "Could not load verse data.";
-    els.verseText.textContent =
-      "Check that data/verses.json exists next to index.html (same folder) and is valid JSON.\n" +
-      "If you're opening the file directly (file://), use a local server or GitHub Pages.";
-    // Clear UI bits so we don't show stale pills
-    els.pills.innerHTML = "";
-    els.hintBtn.disabled = true;
-    els.resetStepBtn.disabled = true;
-    els.startOverBtn.disabled = true;
   }
+
+  wire();
+  boot();
 })();

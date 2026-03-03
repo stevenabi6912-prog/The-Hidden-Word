@@ -4,127 +4,140 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>The Hidden Word (KJV)</title>
-  <link rel="icon" href="favicon.ico">
-  <link rel="stylesheet" href="./css/styles.css" />
-  <meta name="theme-color" content="#6a5cff" />
+  <meta name="description" content="Hide God's Word in your heart — KJV — one verse a day." />
+  <link rel="icon" href="favicon.ico" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <script>
+    window.__THW_BUILD__ = { version: "1.0.0-root", built: "2026-03-03 17:58:48Z" };
+  </script>
+  <script src="js/app.js" defer></script>
 </head>
 <body>
-<div class="bg"></div>
-<header class="topbar">
-  <div class="brand">
+  <div class="bg"></div>
+
+  <header class="topbar">
+    <div class="brand">
       <div class="logo" aria-hidden="true">✦</div>
-  <div class="rightBits">
-    <button class="softBtn" id="navHome" type="button">Home</button>
-    <button class="softBtn" id="navDaily" type="button">Daily</button>
-    <button class="softBtn" id="navPick" type="button">Pick</button>
-    <button class="softBtn" id="navMyVerses" type="button">My Verses</button>
-  </div>
-</header>
-<main class="wrap">
-<section class="card home" id="homeView">
-  <div class="homeGrid">
-    <div class="homeLeft">
-      <div class="homeTitle">The Hidden Word</div>
-      <div class="homeSub">Pick today’s verse, or choose any verse to practice. No competition — just steady growth.</div>
-
-      <div class="homeStats">
-        <div class="statCard">
-          <div class="statLabel">Streak</div>
-          <div class="statValue"><span id="streakCountHome">0</span> days</div>
-        </div>
-        <div class="statCard">
-          <div class="statLabel">Completed</div>
-          <div class="statValue"><span id="completedCountHome">0</span></div>
-        </div>
+      <div class="brandText">
+        <div class="brandTitle">The Hidden Word</div>
+        <div class="brandSub">Hide God's Word in your heart · KJV · one verse a day</div>
       </div>
-
-      <div class="homeBtns">
-        <button class="actionCard actionDaily" id="goDailyBtn" type="button">
-          <div class="actionTitle">Daily verse</div>
-          <div class="actionSub">A new KJV verse every day. Builds your streak.</div>
-        </button>
-        <button class="actionCard actionPick" id="goPickBtn" type="button">
-          <div class="actionTitle">Pick your own</div>
-          <div class="actionSub">Choose any verse from the library to practice.</div>
-        </button>
-      </div>
-
-      <div class="homeHint">Tip: Use “Hint” when you’re stuck — the goal is learning, not racing.</div>
     </div>
 
-    <div class="homeRight">
-      <div class="homePreviewTitle">Today’s verse</div>
-      <div class="homePreviewRef" id="homeTodayRef">Loading…</div>
-      <div class="homePreviewText" id="homeTodayText">Loading…</div>
-    </div>
-  </div>
-</section>
-<section class="card picker" id="pickView" hidden>
-  <div class="pickerHeader">
-    <div>
-      <div class="modalTitle">Pick your own</div>
-      <div class="modalSub">Search the verse library (practice doesn’t affect streak).</div>
-    </div>
-    <div class="rowBtns">
-      <button class="smallBtn" id="backHomeBtn" type="button">Back</button>
-    </div>
-  </div>
-  <div class="pickerBody">
-    <div class="searchRow">
-      <input class="searchInput" id="practiceSearch" placeholder="Search (e.g., Psalm 119 or 'word have I hid')" />
-    </div>
-    <div class="list" id="practiceList"></div>
-  </div>
-</section>
-<section class="card verses" id="versesView" hidden>
-  <div class="pickerHeader">
-    <div>
-      <div class="modalTitle">My Verses</div>
-      <div class="modalSub">Verses you’ve completed (on this device).</div>
-    </div>
-    <div class="rowBtns">
-      <button class="smallBtn" id="backHomeBtn2" type="button">Back</button>
-    </div>
-  </div>
-  <div class="pickerBody">
-    <div class="list" id="myVersesList"></div>
-  </div>
-</section>
-<section class="card hero" id="gameView">
-      <div class="heroTop">
+    <nav class="nav">
+      <button class="navBtn isActive" id="navHome" type="button">Home</button>
+      <button class="navBtn" id="navDaily" type="button">Daily</button>
+      <button class="navBtn" id="navPick" type="button">Pick</button>
+      <button class="navBtn" id="navVerses" type="button">My Verses</button>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section class="card home" id="viewHome">
+      <div class="homeGrid">
         <div>
-          <div class="verseRef" id="verseRef">—</div>
-          <div class="verseDate" id="verseDate">—</div>
+          <h1 class="h1">The Hidden Word</h1>
+          <p class="muted">Pick today's verse, or choose any verse to practice. No competition — just steady growth.</p>
+
+          <div class="statsRow">
+            <div class="pillStat">
+              <div class="pillLabel">Streak</div>
+              <div class="pillValue"><span id="streakHome">0</span> days</div>
+            </div>
+            <div class="pillStat">
+              <div class="pillLabel">Completed</div>
+              <div class="pillValue"><span id="completedHome">0</span></div>
+            </div>
+          </div>
+
+          <div class="bigBtns">
+            <button class="bigCard bigCard--daily" id="homeDaily" type="button">
+              <div class="bigTitle">Daily verse</div>
+              <div class="bigDesc">A new KJV verse every day. Builds your streak.</div>
+            </button>
+
+            <button class="bigCard bigCard--pick" id="homePick" type="button">
+              <div class="bigTitle">Pick your own</div>
+              <div class="bigDesc">Choose any verse from the library to practice.</div>
+            </button>
+          </div>
+
+          <div class="hintLine">Tip: Use “Hint” when you're stuck — the goal is learning, not racing.</div>
+
+          <div class="health" id="healthBox">
+            <div class="healthRow">
+              <span class="healthKey">App</span>
+              <span class="healthVal" id="healthVersion"></span>
+            </div>
+            <div class="healthRow">
+              <span class="healthKey">Verses loaded</span>
+              <span class="healthVal" id="healthVerses">—</span>
+            </div>
+            <div class="healthRow">
+              <span class="healthKey">Status</span>
+              <span class="healthVal" id="healthStatus">Loading…</span>
+            </div>
+          </div>
         </div>
 
-        <div class="streakBox" role="status" aria-live="polite">
-          <div class="streakLabel">Streak</div>
-          <div class="streakValue"><span id="streakCount">0</span> days</div>
+        <aside class="todayCard">
+          <div class="todayTitle">Today's verse</div>
+          <div class="todayRef" id="todayRef">Loading…</div>
+          <div class="todayText" id="todayText">Loading…</div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="card" id="viewPick" hidden>
+      <div class="viewHeader">
+        <div>
+          <div class="viewTitle">Pick your own</div>
+          <div class="muted">Search the library and open a verse to practice.</div>
+        </div>
+      </div>
+      <div class="searchRow">
+        <input class="searchInput" id="pickSearch" placeholder="Search (e.g., Psalm 119 or 'word have I hid')" />
+      </div>
+      <div class="list" id="pickList"></div>
+    </section>
+
+    <section class="card" id="viewVerses" hidden>
+      <div class="viewHeader">
+        <div>
+          <div class="viewTitle">My Verses</div>
+          <div class="muted">Verses you’ve completed (saved on this device).</div>
+        </div>
+      </div>
+      <div class="list" id="myList"></div>
+    </section>
+
+    <section class="card game" id="viewGame" hidden>
+      <div class="gameTop">
+        <div>
+          <div class="gameRef" id="gameRef">—</div>
+          <div class="muted" id="gameMode">—</div>
+        </div>
+        <div class="streakPill">
+          <div class="pillLabel">Streak</div>
+          <div class="pillValue"><span id="streakGame">0</span> days</div>
         </div>
       </div>
 
-      <div class="verseText" id="verseText" aria-live="polite"></div>
-
-      <div class="progressRow">
-        <div class="progressLabel" id="progressLabel">Step 1</div>
-        <div class="dots" id="progressDots" aria-hidden="true"></div>
-      </div>
+      <div class="verseBox" id="verseBox"></div>
 
       <div class="controls">
-        <button class="primaryBtn" id="hintBtn" type="button">Hint: next word</button>
-        <button class="softBtn" id="resetStepBtn" type="button">Reset step</button>
-        <button class="softBtn" id="startOverBtn" type="button">Start over</button>
+        <button class="primary" id="btnHint" type="button">Hint: next word</button>
+        <button class="soft" id="btnResetStep" type="button">Reset step</button>
+        <button class="soft" id="btnStartOver" type="button">Start over</button>
       </div>
 
-      <div class="pillsArea">
-        <div class="pillsLabel">Tap a word:</div>
-        <div class="pills" id="pills"></div>
-      </div>
+      <div class="muted small" id="stepLabel">Step 1</div>
 
-      <div class="encourage" id="encourageText"></div>
+      <div class="wordRow">
+        <div class="muted small">Tap a word:</div>
+        <div class="pills" id="pillRow"></div>
+      </div>
     </section>
-</main>
-
-<script src="js/app.js" defer></script>
+  </main>
 </body>
 </html>
