@@ -11,6 +11,7 @@ import {
   getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
   createUserWithEmailAndPassword,
   updateProfile,
   signOut
@@ -90,6 +91,7 @@ const els = {
   authEmail2: document.getElementById("authEmail2"),
   authPass2: document.getElementById("authPass2"),
   btnSignIn: document.getElementById("btnSignIn"),
+  btnForgotPassword: document.getElementById("btnForgotPassword"),
   btnSignUp: document.getElementById("btnSignUp"),
   authMsg: document.getElementById("authMsg"),
   firebaseStatus: document.getElementById("firebaseStatus"),
@@ -130,7 +132,7 @@ const BADGES = [
 
 const LS_ACTIVE_KID = "thw_activeKidId";
 
-function stripTags(s){
+function stripHtmlTags(s){
   return (s||"" ).toString().replace(/<[^>]*>/g, "").replace(/\s+/g," ").trim();
 }
 
@@ -425,7 +427,7 @@ async function getBibleChapter(bookid, chapter){
   // Expected shape: [{ pk: 1, verse: 1, text: "In the beginning..." }, ...]
   const verses = (Array.isArray(data) ? data : data?.verses || []).map(v => ({
     verse: Number(v.verse ?? v.nr ?? v.verseNum ?? v.pk ?? 0),
-    text: stripTags(v.text ?? v.verseText ?? v.content ?? ""),
+    text: stripHtmlTags(v.text ?? v.verseText ?? v.content ?? ""),
   })).filter(v => v.verse && v.text);
   return verses;
 }
@@ -1049,7 +1051,50 @@ async function doSignIn() {
     await signInWithEmailAndPassword(auth, email, pass);
     els.authMsg.textContent = "";
   } catch (e) {
-    els.authMsg.textContent = e?.message || String(e);
+    els.authMsg.textContent = friendlyAuthError(e);
+  }
+}
+
+function friendlyAuthError(e) {
+  const code = (e && (e.code || e.errorCode)) ? String(e.code || e.errorCode) : "";
+  // Firebase codes are like: auth/wrong-password
+  switch (code) {
+    case "auth/invalid-email":
+      return "That email address doesn't look valid.";
+    case "auth/user-not-found":
+      return "No account found for that email. Use ‘Create parent account’ below.";
+    case "auth/wrong-password":
+      return "Incorrect password. Try again or use ‘Forgot password’.";
+    case "auth/invalid-credential":
+      return "Email or password is incorrect. Try again or use ‘Forgot password’.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Wait a bit, then try again.";
+    case "auth/network-request-failed":
+      return "Network error. Check your connection and try again.";
+    case "auth/email-already-in-use":
+      return "That email is already registered. Use ‘Sign in’ instead.";
+    case "auth/weak-password":
+      return "Password is too weak. Use at least 6 characters.";
+    case "auth/operation-not-allowed":
+      return "Email/password sign-in is not enabled in Firebase yet.";
+    default:
+      return (e && e.message) ? String(e.message) : "Sign-in failed. Please try again.";
+  }
+}
+
+async function doForgotPassword() {
+  if (!fbEnabled) return;
+  els.authMsg.textContent = "";
+  const email = (els.authEmail.value || "").trim() || (els.authEmail2.value || "").trim();
+  if (!email) {
+    els.authMsg.textContent = "Enter your email above, then click ‘Forgot password’.";
+    return;
+  }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    els.authMsg.textContent = "Password reset email sent. Check your inbox (and spam).";
+  } catch (e) {
+    els.authMsg.textContent = friendlyAuthError(e);
   }
 }
 
@@ -1079,7 +1124,7 @@ async function doSignUp() {
     await setActiveKidById(firstKid);
     els.authMsg.textContent = "";
   } catch (e) {
-    els.authMsg.textContent = e?.message || String(e);
+    els.authMsg.textContent = friendlyAuthError(e);
   }
 }
 
@@ -1184,6 +1229,7 @@ function wire() {
   els.btnStartOver.addEventListener("click", startOver);
 
   els.btnSignIn.addEventListener("click", doSignIn);
+  if (els.btnForgotPassword) els.btnForgotPassword.addEventListener("click", doForgotPassword);
   els.btnSignUp.addEventListener("click", doSignUp);
   els.btnSignOut.addEventListener("click", doSignOut);
   els.btnAddKid.addEventListener("click", doAddKid);
