@@ -52,11 +52,6 @@ const els = {
   todayRef: document.getElementById("todayRef"),
   todayText: document.getElementById("todayText"),
 
-  pickSearch: document.getElementById("pickSearch"),
-  pickList: document.getElementById("pickList"),
-  pickTabLibrary: document.getElementById("pickTabLibrary"),
-  pickTabBible: document.getElementById("pickTabBible"),
-  pickLibraryPane: document.getElementById("pickLibraryPane"),
   pickBiblePane: document.getElementById("pickBiblePane"),
   bibleSearch: document.getElementById("bibleSearch"),
   bibleBooks: document.getElementById("bibleBooks"),
@@ -280,20 +275,23 @@ function renderStats() {
   renderBadges(els.badgeRowProfile, activeKid?.badges);
 }
 
+function renderHomeStats() {
+  // Back-compat: older builds called this name
+  renderStats();
+}
+
+
 function renderPickList(filter = "") {
   const q = filter.trim().toLowerCase();
   const items = !q ? library : library.filter(v => (v.ref + " " + v.text).toLowerCase().includes(q));
   if (!items.length) {
-    els.pickList.innerHTML = `<div class="empty">No results.</div>`;
     return;
   }
-  els.pickList.innerHTML = items.slice(0, 200).map(v => `
     <button class="itemBtn" type="button" data-ref="${escapeHTML(v.ref)}">
       <div class="itemRef">${escapeHTML(v.ref)}</div>
       <div class="itemText">${escapeHTML(v.text)}</div>
     </button>
   `).join("");
-  els.pickList.querySelectorAll(".itemBtn").forEach(btn => {
     btn.addEventListener("click", () => {
       const ref = btn.getAttribute("data-ref");
       const verse = library.find(x => x.ref === ref);
@@ -375,11 +373,6 @@ async function getBibleChapter(bookNr, chapterNr) {
 
 function setPickTab(tab) {
   const isBible = tab === "bible";
-  els.pickTabLibrary.classList.toggle("active", !isBible);
-  els.pickTabBible.classList.toggle("active", isBible);
-  els.pickTabLibrary.setAttribute("aria-selected", String(!isBible));
-  els.pickTabBible.setAttribute("aria-selected", String(isBible));
-  els.pickLibraryPane.hidden = isBible;
   els.pickBiblePane.hidden = !isBible;
   if (isBible) {
     // Lazy-load books
@@ -485,16 +478,16 @@ async function initBiblePicker() {
   if (!els.bibleBooks) return;
   if (bibleState.books) return; // already loaded
 
-  els.bibleHelp.textContent = "Loading Bible index…";
+  if (els.bibleHelp) els.bibleHelp.textContent = "Loading Bible index...";
   try {
     await ensureBibleBooks();
-    els.bibleHelp.textContent = "Tip: click a book → chapter → verse.";
+    if (els.bibleHelp) els.bibleHelp.textContent = "Tip: click a book → chapter → verse.";
     renderBibleBooks(els.bibleSearch.value || "");
     els.bibleChapters.innerHTML = `<div class="empty">Pick a book.</div>`;
     els.bibleVerses.innerHTML = `<div class="empty">Pick a chapter.</div>`;
   } catch (e) {
     console.error(e);
-    els.bibleHelp.textContent = "Couldn't load the Bible index. Check your connection.";
+    if (els.bibleHelp) els.bibleHelp.textContent = "Couldn't load the Bible index. Check your connection.";
     els.bibleBooks.innerHTML = `<div class="empty">Bible index failed to load.</div>`;
   }
 }
@@ -1165,12 +1158,12 @@ function wire() {
   els.navPick.addEventListener("click", () => {
     setActiveNav(els.navPick);
     showView("pick");
-    setPickTab("library");
-    renderPickList(els.pickSearch.value || "");
+    // Pick screen is Bible-only now
+    initBiblePicker();
+    // focus the search for quick typing
+    els.bibleSearch?.focus();
   });
 
-  els.pickTabLibrary.addEventListener("click", () => setPickTab("library"));
-  els.pickTabBible.addEventListener("click", () => setPickTab("bible"));
   els.navVerses.addEventListener("click", () => {
     setActiveNav(els.navVerses);
     showView("verses");
@@ -1212,13 +1205,8 @@ function wire() {
   els.homePick.addEventListener("click", () => {
     setActiveNav(els.navPick);
     showView("pick");
-    setPickTab("library");
-    renderPickList("");
-    els.pickSearch.focus();
-  });
-
-  els.pickSearch.addEventListener("input", () => {
-    renderPickList(els.pickSearch.value || "");
+    initBiblePicker();
+    els.bibleSearch?.focus();
   });
 
   els.bibleSearch.addEventListener("input", () => {
