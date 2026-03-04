@@ -157,6 +157,16 @@ const BADGES = [
   { id: "verses10", icon: "📚", label: "10 verses" },
 ];
 
+
+  // Active profile helpers (parent or child id). Stored in LS_ACTIVE_KID.
+  function getActiveProfileId() {
+    return localStorage.getItem(LS_ACTIVE_KID) || "parent";
+  }
+
+  function setActiveProfileId(id) {
+    localStorage.setItem(LS_ACTIVE_KID, id || "parent");
+  }
+
 const LS_ACTIVE_KID = "thw_activeKidId";
 
 function stripHtmlTags(s){
