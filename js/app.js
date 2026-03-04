@@ -95,7 +95,10 @@ const els = {
   guestContinue: document.getElementById("guestContinue"),
 };
 
-let guestAllowed = localStorage.getItem('thw_guest_ok') === '1';
+// Guest mode is allowed *per session* after the user explicitly chooses it.
+// We intentionally do NOT persist this across reloads because the app should
+// start on the login/profile screen each visit unless already signed in.
+let guestAllowed = false;
 let pendingGuestAction = null;
 
 let library = [];
@@ -964,7 +967,6 @@ function wire() {
   });
   els.guestContinue?.addEventListener("click", () => {
     guestAllowed = true;
-    localStorage.setItem("thw_guest_ok", "1");
     const fn = pendingGuestAction;
     pendingGuestAction = null;
     hideGuestModal();
@@ -1016,9 +1018,9 @@ async function boot() {
 
   await initFirebase();
 
-  // Start on Profile (login) unless the user is already signed in or has
-  // explicitly chosen to continue as a guest on this device.
-  if (!auth?.currentUser && !guestAllowed) {
+  // Start on Profile (login) unless the user is already signed in.
+  // (Guest choice is made when starting a verse, not at page-load.)
+  if (!auth?.currentUser) {
     setActiveNav(els.navProfile);
     showView("profile");
     renderProfile();
