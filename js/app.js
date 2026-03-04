@@ -54,6 +54,15 @@ const els = {
 
   pickSearch: document.getElementById("pickSearch"),
   pickList: document.getElementById("pickList"),
+  pickTabLibrary: document.getElementById("pickTabLibrary"),
+  pickTabBible: document.getElementById("pickTabBible"),
+  pickLibraryPane: document.getElementById("pickLibraryPane"),
+  pickBiblePane: document.getElementById("pickBiblePane"),
+  bibleSearch: document.getElementById("bibleSearch"),
+  bibleBooks: document.getElementById("bibleBooks"),
+  bibleChapters: document.getElementById("bibleChapters"),
+  bibleVerses: document.getElementById("bibleVerses"),
+  bibleHelp: document.getElementById("bibleHelp"),
   myList: document.getElementById("myList"),
 
   gameRef: document.getElementById("gameRef"),
@@ -293,6 +302,201 @@ function renderPickList(filter = "") {
       requireLoginOrGuest(() => startGame(verse, "pick"));
     });
   });
+}
+
+// -----------------------------
+// Bible picker (full KJV via api.getbible.net)
+// -----------------------------
+
+const BIBLE_API_BASE = "https://api.getbible.net/v2/kjv";
+
+const bibleState = {
+  books: null,
+  chaptersByBook: new Map(),
+  chapterCache: new Map(), // key: "bookNr:chapter" => chapter json
+  selectedBook: null,
+  selectedChapter: null,
+};
+
+async function fetchJson(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
+  return await r.json();
+}
+
+async function ensureBibleBooks() {
+  if (bibleState.books) return bibleState.books;
+
+  // Simple localStorage cache so we don't hammer the endpoint.
+  const cacheKey = "thw_bible_books_kjv_v1";
+  const cached = safeJSONParse(localStorage.getItem(cacheKey));
+  if (cached && Array.isArray(cached.data) && typeof cached.at === "number") {
+    if (Date.now() - cached.at < 1000 * 60 * 60 * 24 * 7) {
+      bibleState.books = cached.data;
+      return bibleState.books;
+    }
+  }
+
+  const books = await fetchJson(`${BIBLE_API_BASE}/books.json`);
+  // Normalize shape: [{nr,name}]
+  bibleState.books = (Array.isArray(books) ? books : []).map(b => ({
+    nr: Number(b.nr),
+    name: String(b.name || "").trim(),
+  })).filter(b => b.nr && b.name);
+  localStorage.setItem(cacheKey, JSON.stringify({ at: Date.now(), data: bibleState.books }));
+  return bibleState.books;
+}
+
+async function ensureBibleChapters(bookNr) {
+  const k = String(bookNr);
+  if (bibleState.chaptersByBook.has(k)) return bibleState.chaptersByBook.get(k);
+
+  const chapters = await fetchJson(`${BIBLE_API_BASE}/${encodeURIComponent(bookNr)}/chapters.json`);
+  // Endpoint returns something like: { book: { nr, name }, chapters: [1,2,...] } or just [..]
+  let list = [];
+  if (Array.isArray(chapters)) list = chapters;
+  else if (chapters && Array.isArray(chapters.chapters)) list = chapters.chapters;
+  else if (chapters && typeof chapters === "object") {
+    // Try to salvage numeric keys
+    list = Object.keys(chapters).map(x => Number(x)).filter(n => Number.isFinite(n));
+  }
+  list = list.map(n => Number(n)).filter(n => Number.isFinite(n) && n > 0);
+  bibleState.chaptersByBook.set(k, list);
+  return list;
+}
+
+async function getBibleChapter(bookNr, chapterNr) {
+  const key = `${bookNr}:${chapterNr}`;
+  if (bibleState.chapterCache.has(key)) return bibleState.chapterCache.get(key);
+  const data = await fetchJson(`${BIBLE_API_BASE}/${encodeURIComponent(bookNr)}/${encodeURIComponent(chapterNr)}.json`);
+  bibleState.chapterCache.set(key, data);
+  return data;
+}
+
+function setPickTab(tab) {
+  const isBible = tab === "bible";
+  els.pickTabLibrary.classList.toggle("active", !isBible);
+  els.pickTabBible.classList.toggle("active", isBible);
+  els.pickTabLibrary.setAttribute("aria-selected", String(!isBible));
+  els.pickTabBible.setAttribute("aria-selected", String(isBible));
+  els.pickLibraryPane.hidden = isBible;
+  els.pickBiblePane.hidden = !isBible;
+  if (isBible) {
+    // Lazy-load books
+    void initBiblePicker();
+  }
+}
+
+function renderBibleBooks(filter = "") {
+  const q = filter.trim().toLowerCase();
+  const books = (bibleState.books || []).filter(b => !q || b.name.toLowerCase().includes(q));
+  if (!books.length) {
+    els.bibleBooks.innerHTML = `<div class="empty">No matching books.</div>`;
+    return;
+  }
+  els.bibleBooks.innerHTML = books.map(b => {
+    const active = bibleState.selectedBook === b.nr;
+    return `<button class="bibleBtn ${active ? "active" : ""}" type="button" data-book="${b.nr}">${escapeHTML(b.name)}</button>`;
+  }).join("");
+  els.bibleBooks.querySelectorAll(".bibleBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const bookNr = Number(btn.getAttribute("data-book"));
+      if (!bookNr) return;
+      bibleState.selectedBook = bookNr;
+      bibleState.selectedChapter = null;
+      renderBibleBooks(els.bibleSearch.value || "");
+      await renderBibleChapters(bookNr);
+    });
+  });
+}
+
+async function renderBibleChapters(bookNr) {
+  els.bibleChapters.innerHTML = `<div class="empty">Loading chapters…</div>`;
+  els.bibleVerses.innerHTML = `<div class="empty">Pick a chapter.</div>`;
+  try {
+    const list = await ensureBibleChapters(bookNr);
+    if (!list.length) {
+      els.bibleChapters.innerHTML = `<div class="empty">No chapters found.</div>`;
+      return;
+    }
+    els.bibleChapters.innerHTML = list.map(ch => {
+      const active = bibleState.selectedChapter === ch;
+      return `<button class="bibleBtn ${active ? "active" : ""}" type="button" data-ch="${ch}">${ch}</button>`;
+    }).join("");
+    els.bibleChapters.querySelectorAll(".bibleBtn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const ch = Number(btn.getAttribute("data-ch"));
+        if (!ch) return;
+        bibleState.selectedChapter = ch;
+        // Repaint active styles
+        await renderBibleChapters(bookNr);
+        await renderBibleVerses(bookNr, ch);
+      });
+    });
+  } catch (e) {
+    console.error(e);
+    els.bibleChapters.innerHTML = `<div class="empty">Couldn't load chapters. Check your connection.</div>`;
+  }
+}
+
+function extractVersesFromChapterJson(chJson) {
+  // api.getbible.net tends to return: { book, chapter, verses: [{ verse: "1", text: "..." }, ...] }
+  if (chJson && Array.isArray(chJson.verses)) return chJson.verses;
+  if (chJson && Array.isArray(chJson.chapter)) return chJson.chapter;
+  return [];
+}
+
+async function renderBibleVerses(bookNr, chapterNr) {
+  els.bibleVerses.innerHTML = `<div class="empty">Loading verses…</div>`;
+  try {
+    const data = await getBibleChapter(bookNr, chapterNr);
+    const verses = extractVersesFromChapterJson(data);
+    const bookName = (bibleState.books || []).find(b => b.nr === bookNr)?.name || `Book ${bookNr}`;
+    if (!verses.length) {
+      els.bibleVerses.innerHTML = `<div class="empty">No verses found.</div>`;
+      return;
+    }
+    els.bibleVerses.innerHTML = verses.map(v => {
+      const vn = (v.verse ?? v.nr ?? v.v ?? "").toString();
+      const text = (v.text ?? v.verseText ?? v.t ?? "").toString();
+      const ref = `${bookName} ${chapterNr}:${vn}`;
+      return `
+        <button class="verseBtn" type="button" data-ref="${escapeHTML(ref)}" data-text="${escapeHTML(text)}">
+          <span class="vn">${escapeHTML(vn)}</span>
+          <span class="vt">${escapeHTML(text)}</span>
+        </button>
+      `;
+    }).join("");
+    els.bibleVerses.querySelectorAll(".verseBtn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const ref = btn.getAttribute("data-ref") || "";
+        const text = btn.getAttribute("data-text") || "";
+        if (!ref || !text) return;
+        requireLoginOrGuest(() => startGame({ ref, text }, "pick"));
+      });
+    });
+  } catch (e) {
+    console.error(e);
+    els.bibleVerses.innerHTML = `<div class="empty">Couldn't load verses.</div>`;
+  }
+}
+
+async function initBiblePicker() {
+  if (!els.bibleBooks) return;
+  if (bibleState.books) return; // already loaded
+
+  els.bibleHelp.textContent = "Loading Bible index…";
+  try {
+    await ensureBibleBooks();
+    els.bibleHelp.textContent = "Tip: click a book → chapter → verse.";
+    renderBibleBooks(els.bibleSearch.value || "");
+    els.bibleChapters.innerHTML = `<div class="empty">Pick a book.</div>`;
+    els.bibleVerses.innerHTML = `<div class="empty">Pick a chapter.</div>`;
+  } catch (e) {
+    console.error(e);
+    els.bibleHelp.textContent = "Couldn't load the Bible index. Check your connection.";
+    els.bibleBooks.innerHTML = `<div class="empty">Bible index failed to load.</div>`;
+  }
 }
 
 function renderMyVerses() {
@@ -961,8 +1165,12 @@ function wire() {
   els.navPick.addEventListener("click", () => {
     setActiveNav(els.navPick);
     showView("pick");
+    setPickTab("library");
     renderPickList(els.pickSearch.value || "");
   });
+
+  els.pickTabLibrary.addEventListener("click", () => setPickTab("library"));
+  els.pickTabBible.addEventListener("click", () => setPickTab("bible"));
   els.navVerses.addEventListener("click", () => {
     setActiveNav(els.navVerses);
     showView("verses");
@@ -995,8 +1203,6 @@ function wire() {
     if (e.target === els.guestModal) hideGuestModal();
   });
 
-;
-
   els.homeDaily.addEventListener("click", () => {
     requireLoginOrGuest(() => {
       setActiveNav(els.navDaily);
@@ -1006,12 +1212,27 @@ function wire() {
   els.homePick.addEventListener("click", () => {
     setActiveNav(els.navPick);
     showView("pick");
+    setPickTab("library");
     renderPickList("");
     els.pickSearch.focus();
   });
 
   els.pickSearch.addEventListener("input", () => {
     renderPickList(els.pickSearch.value || "");
+  });
+
+  els.bibleSearch.addEventListener("input", () => {
+    const q = (els.bibleSearch.value || "").trim();
+    // If user types something that looks like a reference, we still keep browsing experience.
+    // Books list filters live as you type.
+    bibleRenderBooks(q);
+  });
+
+  els.bibleSearch.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    const q = (els.bibleSearch.value || "").trim();
+    if (!q) return;
+    bibleTryDirectReference(q);
   });
 
   els.btnHint.addEventListener("click", hintNext);

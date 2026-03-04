@@ -195,13 +195,42 @@
       <div class="viewHeader">
         <div>
           <div class="viewTitle">Pick your own</div>
-          <div class="muted">Search the library and open a verse to practice.</div>
+	          <div class="muted">Search your library, or browse the Bible.</div>
         </div>
       </div>
-      <div class="searchRow">
-        <input class="searchInput" id="pickSearch" placeholder="Search (e.g., Psalm 119 or 'word have I hid')" />
-      </div>
-      <div class="list" id="pickList"></div>
+
+	      <div class="pickTabs" role="tablist" aria-label="Pick tabs">
+	        <button id="pickTabLibrary" class="pill active" type="button" role="tab" aria-selected="true">Library</button>
+	        <button id="pickTabBible" class="pill" type="button" role="tab" aria-selected="false">Bible</button>
+	      </div>
+
+	      <div id="pickLibraryPane">
+	        <div class="searchRow">
+	          <input class="searchInput" id="pickSearch" placeholder="Search (e.g., Psalm 119 or 'word have I hid')" />
+	        </div>
+	        <div class="list" id="pickList"></div>
+	      </div>
+
+	      <div id="pickBiblePane" hidden>
+	        <div class="searchRow">
+	          <input class="searchInput" id="bibleSearch" placeholder="Type a reference (e.g., John 3:16) or search a book" />
+	        </div>
+	        <div class="bibleGrid">
+	          <div class="bibleCol">
+	            <div class="muted small" style="margin:0 0 8px 2px;">Books</div>
+	            <div class="list" id="bibleBooks"></div>
+	          </div>
+	          <div class="bibleCol">
+	            <div class="muted small" style="margin:0 0 8px 2px;">Chapters</div>
+	            <div class="bibleChapters" id="bibleChapters"></div>
+	          </div>
+	          <div class="bibleCol">
+	            <div class="muted small" style="margin:0 0 8px 2px;">Verses</div>
+	            <div class="list" id="bibleVerses"></div>
+	          </div>
+	        </div>
+	        <div class="muted small" style="margin-top:10px;">Bible text is fetched live from GetBible.net (KJV).</div>
+	      </div>
     </section>
 
     <section class="card" id="viewVerses" hidden>
