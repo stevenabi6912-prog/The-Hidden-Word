@@ -417,13 +417,6 @@ async function ensureBibleBooks(){
   })).filter(b => b.bookid && b.name);
 }
 
-function stripTags(s){
-  return String(s || "")
-    .replace(/<[^>]*>/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 async function getBibleChapter(bookid, chapter){
   const url = `${BOLLS_API}/get-text/${BOLLS_TRANSLATION}/${encodeURIComponent(bookid)}/${encodeURIComponent(chapter)}/`;
   const res = await fetch(url, { cache: "no-store" });
