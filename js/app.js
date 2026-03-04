@@ -130,6 +130,10 @@ const BADGES = [
 
 const LS_ACTIVE_KID = "thw_activeKidId";
 
+function stripTags(s){
+  return (s||"" ).toString().replace(/<[^>]*>/g, "").replace(/\s+/g," ").trim();
+}
+
 function escapeHTML(s) {
   return String(s)
     .replaceAll("&", "&amp;")
@@ -281,94 +285,8 @@ function renderHomeStats() {
 }
 
 
-function renderPickList(filter = "") {
-  const q = filter.trim().toLowerCase();
-  const items = !q ? library : library.filter(v => (v.ref + " " + v.text).toLowerCase().includes(q));
-  if (!items.length) {
-    return;
-  }
-    <button class="itemBtn" type="button" data-ref="${escapeHTML(v.ref)}">
-      <div class="itemRef">${escapeHTML(v.ref)}</div>
-      <div class="itemText">${escapeHTML(v.text)}</div>
-    </button>
-  `).join("");
-    btn.addEventListener("click", () => {
-      const ref = btn.getAttribute("data-ref");
-      const verse = library.find(x => x.ref === ref);
-      if (!verse) return;
-      // Warn if not signed in (allow guest continue).
-      requireLoginOrGuest(() => startGame(verse, "pick"));
-    });
-  });
-}
-
-// -----------------------------
-// Bible picker (full KJV via api.getbible.net)
-// -----------------------------
-
-const BIBLE_API_BASE = "https://api.getbible.net/v2/kjv";
-
-const bibleState = {
-  books: null,
-  chaptersByBook: new Map(),
-  chapterCache: new Map(), // key: "bookNr:chapter" => chapter json
-  selectedBook: null,
-  selectedChapter: null,
-};
-
-async function fetchJson(url) {
-  const r = await fetch(url, { cache: "no-store" });
-  if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
-  return await r.json();
-}
-
-async function ensureBibleBooks() {
-  if (bibleState.books) return bibleState.books;
-
-  // Simple localStorage cache so we don't hammer the endpoint.
-  const cacheKey = "thw_bible_books_kjv_v1";
-  const cached = safeJSONParse(localStorage.getItem(cacheKey));
-  if (cached && Array.isArray(cached.data) && typeof cached.at === "number") {
-    if (Date.now() - cached.at < 1000 * 60 * 60 * 24 * 7) {
-      bibleState.books = cached.data;
-      return bibleState.books;
-    }
-  }
-
-  const books = await fetchJson(`${BIBLE_API_BASE}/books.json`);
-  // Normalize shape: [{nr,name}]
-  bibleState.books = (Array.isArray(books) ? books : []).map(b => ({
-    nr: Number(b.nr),
-    name: String(b.name || "").trim(),
-  })).filter(b => b.nr && b.name);
-  localStorage.setItem(cacheKey, JSON.stringify({ at: Date.now(), data: bibleState.books }));
-  return bibleState.books;
-}
-
-async function ensureBibleChapters(bookNr) {
-  const k = String(bookNr);
-  if (bibleState.chaptersByBook.has(k)) return bibleState.chaptersByBook.get(k);
-
-  const chapters = await fetchJson(`${BIBLE_API_BASE}/${encodeURIComponent(bookNr)}/chapters.json`);
-  // Endpoint returns something like: { book: { nr, name }, chapters: [1,2,...] } or just [..]
-  let list = [];
-  if (Array.isArray(chapters)) list = chapters;
-  else if (chapters && Array.isArray(chapters.chapters)) list = chapters.chapters;
-  else if (chapters && typeof chapters === "object") {
-    // Try to salvage numeric keys
-    list = Object.keys(chapters).map(x => Number(x)).filter(n => Number.isFinite(n));
-  }
-  list = list.map(n => Number(n)).filter(n => Number.isFinite(n) && n > 0);
-  bibleState.chaptersByBook.set(k, list);
-  return list;
-}
-
-async function getBibleChapter(bookNr, chapterNr) {
-  const key = `${bookNr}:${chapterNr}`;
-  if (bibleState.chapterCache.has(key)) return bibleState.chapterCache.get(key);
-  const data = await fetchJson(`${BIBLE_API_BASE}/${encodeURIComponent(bookNr)}/${encodeURIComponent(chapterNr)}.json`);
-  bibleState.chapterCache.set(key, data);
-  return data;
+function renderPickList(){
+  // Library picker removed (Bible-only picker).
 }
 
 function setPickTab(tab) {
@@ -432,12 +350,22 @@ async function renderBibleChapters(bookNr) {
   }
 }
 
-function extractVersesFromChapterJson(chJson) {
-  // api.getbible.net tends to return: { book, chapter, verses: [{ verse: "1", text: "..." }, ...] }
-  if (chJson && Array.isArray(chJson.verses)) return chJson.verses;
-  if (chJson && Array.isArray(chJson.chapter)) return chJson.chapter;
+function extractVersesFromChapterJson(chJson){
+  if (Array.isArray(chJson)) return chJson;
+  // Older API shapes fallback
+  if (chJson && typeof chJson === "object") {
+    if (Array.isArray(chJson.verses)) return chJson.verses;
+    const book = chJson.book || chJson;
+    if (book && typeof book === "object") {
+      const chapterKey = Object.keys(book).find(k => k !== "book_name" && k !== "chapter_nr");
+      if (chapterKey && book[chapterKey] && Array.isArray(book[chapterKey].chapter)) {
+        return book[chapterKey].chapter;
+      }
+    }
+  }
   return [];
 }
+
 
 async function renderBibleVerses(bookNr, chapterNr) {
   els.bibleVerses.innerHTML = `<div class="empty">Loading verses…</div>`;
@@ -474,6 +402,40 @@ async function renderBibleVerses(bookNr, chapterNr) {
   }
 }
 
+
+async function ensureBibleBooks(){
+  if (bibleState.books && bibleState.books.length) return;
+  const url = `${BOLLS_API}/get-books/${BOLLS_TRANSLATION}/`;
+  const res = await fetch(url, { cache: "force-cache" });
+  if (!res.ok) throw new Error(`Bible books failed: ${res.status}`);
+  const data = await res.json();
+  // Expected shape: [{ bookid: "01", book: "Genesis", chapters: 50 }, ...]
+  bibleState.books = (Array.isArray(data) ? data : []).map(b => ({
+    bookid: String(b.bookid ?? b.nr ?? b.id ?? "").trim() || String(b.bookId ?? "").trim(),
+    name: String(b.book ?? b.name ?? "").trim(),
+    chapters: Number(b.chapters ?? b.chapterCount ?? 0) || 0,
+  })).filter(b => b.bookid && b.name);
+}
+
+function stripTags(s){
+  return String(s || "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function getBibleChapter(bookid, chapter){
+  const url = `${BOLLS_API}/get-text/${BOLLS_TRANSLATION}/${encodeURIComponent(bookid)}/${encodeURIComponent(chapter)}/`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Bible chapter failed: ${res.status}`);
+  const data = await res.json();
+  // Expected shape: [{ pk: 1, verse: 1, text: "In the beginning..." }, ...]
+  const verses = (Array.isArray(data) ? data : data?.verses || []).map(v => ({
+    verse: Number(v.verse ?? v.nr ?? v.verseNum ?? v.pk ?? 0),
+    text: stripTags(v.text ?? v.verseText ?? v.content ?? ""),
+  })).filter(v => v.verse && v.text);
+  return verses;
+}
 async function initBiblePicker() {
   if (!els.bibleBooks) return;
   if (bibleState.books) return; // already loaded

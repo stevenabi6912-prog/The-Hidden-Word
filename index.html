@@ -76,7 +76,7 @@
 
             <button class="bigCard bigCard--pick" id="homePick" type="button">
               <div class="bigTitle">Pick your own</div>
-              <div class="bigDesc">Choose any verse from the library to practice.</div>
+              <div class="bigDesc">Browse any verse in the Bible to practice.</div>
             </button>
           </div>
 
@@ -191,37 +191,38 @@
       </div>
 </section>
 
-    <section class="card" id="viewPick" hidden>
-      <div class="viewHeader">
-        <div>
-          <div class="viewTitle">Pick your own</div>
-	          <div class="muted">Search your library, or browse the Bible.</div>
-        </div>
-      </div>
-<div class="list" id="pickList"></div>
-	      </div>
+    <section class="card" id="viewPick" style="display:none;">
+  <h2>Pick your own</h2>
+  <p class="muted">Browse the Bible or type a reference (KJV).</p>
 
-	      <div id="pickBiblePane" hidden>
-	        <div class="searchRow">
-	          <input class="searchInput" id="bibleSearch" placeholder="Type a reference (e.g., John 3:16) or search a book" />
-	        </div>
-	        <div class="bibleGrid">
-	          <div class="bibleCol">
-	            <div class="muted small" style="margin:0 0 8px 2px;">Books</div>
-	            <div class="list" id="bibleBooks"></div>
-	          </div>
-	          <div class="bibleCol">
-	            <div class="muted small" style="margin:0 0 8px 2px;">Chapters</div>
-	            <div class="bibleChapters" id="bibleChapters"></div>
-	          </div>
-	          <div class="bibleCol">
-	            <div class="muted small" style="margin:0 0 8px 2px;">Verses</div>
-	            <div class="list" id="bibleVerses"></div>
-	          </div>
-	        </div>
-	        <div class="muted small" style="margin-top:10px;">Bible text is fetched live from GetBible.net (KJV).</div>
-	      </div>
-    </section>
+  <div id="pickBiblePane">
+    <div class="pickSearchRow">
+      <input id="bibleSearch" class="textInput" type="text" placeholder="Type a reference (e.g., John 3:16) or search a book" />
+    </div>
+
+    <div class="pickGrid">
+      <div class="pickCol">
+        <div class="pickColHead"><div class="pickColTitle">Books</div></div>
+        <div id="bibleBooks" class="pickList"></div>
+      </div>
+      <div class="pickCol">
+        <div class="pickColHead"><div class="pickColTitle">Chapters</div></div>
+        <div id="bibleChapters" class="pickList"></div>
+      </div>
+      <div class="pickCol">
+        <div class="pickColHead"><div class="pickColTitle">Verses</div></div>
+        <div id="bibleVerses" class="pickList"></div>
+      </div>
+    </div>
+
+    <div class="muted" id="bibleHelp"></div>
+  </div>
+</section>
+
+
+
+
+
 
     <section class="card" id="viewVerses" hidden>
       <div class="viewHeader">
