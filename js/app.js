@@ -99,7 +99,34 @@ const els = {
   guestModal: document.getElementById("guestModal"),
   guestGoProfile: document.getElementById("guestGoProfile"),
   guestContinue: document.getElementById("guestContinue"),
+
+  alertModal: document.getElementById("alertModal"),
+  alertTitle: document.getElementById("alertTitle"),
+  alertBody: document.getElementById("alertBody"),
+  alertOk: document.getElementById("alertOk"),
 };
+
+function showAlert(title, message) {
+  if (!els.alertModal) {
+    // last-ditch fallback
+    // eslint-disable-next-line no-alert
+    alert(`${title || 'Notice'}\n\n${message || ''}`);
+    return;
+  }
+  els.alertTitle.textContent = title || "Notice";
+  els.alertBody.textContent = message || "";
+  els.alertModal.hidden = false;
+}
+
+function hideAlert() {
+  if (!els.alertModal) return;
+  els.alertModal.hidden = true;
+}
+
+els.alertOk?.addEventListener("click", hideAlert);
+els.alertModal?.addEventListener("click", (e) => {
+  if (e.target === els.alertModal) hideAlert();
+});
 
 // Guest mode is allowed *per session* after the user explicitly chooses it.
 // We intentionally do NOT persist this across reloads because the app should
@@ -1045,13 +1072,16 @@ async function doSignIn() {
   const pass = (els.authPass.value || "").trim();
   if (!email || !pass) {
     els.authMsg.textContent = "Please enter email + password.";
+    showAlert("Missing info", "Please enter your email and password.");
     return;
   }
   try {
     await signInWithEmailAndPassword(auth, email, pass);
     els.authMsg.textContent = "";
   } catch (e) {
-    els.authMsg.textContent = friendlyAuthError(e);
+    const msg = friendlyAuthError(e);
+    els.authMsg.textContent = msg;
+    showAlert("Sign in failed", msg);
   }
 }
 
@@ -1070,13 +1100,17 @@ function friendlyAuthError(e) {
     case "auth/too-many-requests":
       return "Too many attempts. Wait a bit, then try again.";
     case "auth/network-request-failed":
-      return "Network error. Check your connection and try again.";
+      return "Network error. Check your connection and try again. If you're on GitHub Pages, also make sure your domain is added in Firebase → Authentication → Settings → Authorized domains (e.g., stevenabi6912-prog.github.io).";
     case "auth/email-already-in-use":
       return "That email is already registered. Use ‘Sign in’ instead.";
     case "auth/weak-password":
       return "Password is too weak. Use at least 6 characters.";
     case "auth/operation-not-allowed":
       return "Email/password sign-in is not enabled in Firebase yet.";
+    case "auth/invalid-api-key":
+      return "Firebase API key is invalid. Double-check js/firebase-config.js (apiKey) and any API key restrictions in Google Cloud.";
+    case "auth/app-not-authorized":
+      return "This site isn't authorized for Firebase Auth. Add your domain in Firebase → Authentication → Settings → Authorized domains.";
     default:
       return (e && e.message) ? String(e.message) : "Sign-in failed. Please try again.";
   }
@@ -1088,13 +1122,20 @@ async function doForgotPassword() {
   const email = (els.authEmail.value || "").trim() || (els.authEmail2.value || "").trim();
   if (!email) {
     els.authMsg.textContent = "Enter your email above, then click ‘Forgot password’.";
+    showAlert("Forgot password", "Enter your email in the Sign in box first, then click Forgot password.");
     return;
   }
   try {
     await sendPasswordResetEmail(auth, email);
     els.authMsg.textContent = "Password reset email sent. Check your inbox (and spam).";
+    showAlert(
+      "Password reset email sent",
+      "Check your inbox (and spam/junk). If you don't see it in a few minutes, try again and make sure the email is correct."
+    );
   } catch (e) {
-    els.authMsg.textContent = friendlyAuthError(e);
+    const msg = friendlyAuthError(e);
+    els.authMsg.textContent = msg;
+    showAlert("Password reset failed", msg);
   }
 }
 
@@ -1106,6 +1147,7 @@ async function doSignUp() {
   const pass = (els.authPass2.value || "").trim();
   if (!email || !pass) {
     els.authMsg.textContent = "Please enter email + password.";
+    showAlert("Missing info", "Please enter an email and password to create the parent account.");
     return;
   }
   try {
@@ -1124,7 +1166,9 @@ async function doSignUp() {
     await setActiveKidById(firstKid);
     els.authMsg.textContent = "";
   } catch (e) {
-    els.authMsg.textContent = friendlyAuthError(e);
+    const msg = friendlyAuthError(e);
+    els.authMsg.textContent = msg;
+    showAlert("Create account failed", msg);
   }
 }
 
