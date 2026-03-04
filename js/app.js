@@ -574,35 +574,44 @@ function renderKidsRow() {
 
   const activeId = activeKid?.id || "parent";
 
-  // Parent selector first
-  const parentBtn = `
-    <button class="kidBtn ${activeId==="parent" ? "isActive":""}" type="button" data-kid="parent" title="Use parent profile">
-      <div class="avatar" aria-hidden="true">
-        <svg viewBox="0 0 48 48" width="20" height="20">
-          <circle cx="24" cy="18" r="9" fill="rgba(13,19,33,.35)"/>
-          <path d="M10 44c1-9 9-14 14-14s13 5 14 14" fill="rgba(13,19,33,.35)"/>
-        </svg>
-      </div>
-      <div class="kidName">${escapeHTML(parentDoc?.displayName || "Parent")}</div>
-    </button>
+  // NOTE: Use a wrapper element per chip so the delete button isn't nested inside another <button>
+  const parentLabel = escapeHTML(parentDoc?.displayName || "Parent");
+  const parentChip = `
+    <div class="kidChip" title="Use parent profile">
+      <button class="kidBtn ${activeId==="parent" ? "isActive" : ""}" type="button" data-kid="parent">
+        <div class="avatar" aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="20" height="20">
+            <circle cx="24" cy="18" r="9" fill="rgba(13,19,33,.35)"/>
+            <path d="M10 44c1-9 9-14 14-14s13 5 14 14" fill="rgba(13,19,33,.35)"/>
+          </svg>
+        </div>
+        <div class="kidName">${parentLabel}</div>
+        <div class="kidTag">Parent</div>
+      </button>
+    </div>
   `;
 
-  const kidsHtml = kids.map(k => `
-    <button class="kidBtn ${k.id===activeId ? "isActive":""}" type="button" data-kid="${escapeHTML(k.id)}" title="Switch to ${escapeHTML(k.name)}">
-      <div class="avatar" aria-hidden="true">
-        <svg viewBox="0 0 48 48" width="20" height="20">
-          <circle cx="24" cy="18" r="9" fill="rgba(13,19,33,.35)"/>
-          <path d="M10 44c1-9 9-14 14-14s13 5 14 14" fill="rgba(13,19,33,.35)"/>
-        </svg>
+  const kidsHtml = kids.map(k => {
+    const kidName = escapeHTML(k.name);
+    const kidId = escapeHTML(k.id);
+    const isActive = (k.id === activeId);
+    return `
+      <div class="kidChip" title="Switch to ${kidName}">
+        <button class="kidBtn ${isActive ? "isActive" : ""}" type="button" data-kid="${kidId}">
+          <div class="avatar" aria-hidden="true">
+            <svg viewBox="0 0 48 48" width="20" height="20">
+              <circle cx="24" cy="18" r="9" fill="rgba(13,19,33,.35)"/>
+              <path d="M10 44c1-9 9-14 14-14s13 5 14 14" fill="rgba(13,19,33,.35)"/>
+            </svg>
+          </div>
+          <div class="kidName">${kidName}</div>
+        </button>
+        <button class="kidDel" type="button" data-del="${kidId}" aria-label="Delete ${kidName}" title="Delete">×</button>
       </div>
-      <div class="kidName">${escapeHTML(k.name)}</div>
-      <button class="kidDel" type="button" data-del="${escapeHTML(k.id)}" aria-label="Delete ${escapeHTML(k.name)}" title="Delete">
-        ×
-      </button>
-    </button>
-  `).join("");
+    `;
+  }).join("");
 
-  els.kidsRow.innerHTML = parentBtn + kidsHtml;
+  els.kidsRow.innerHTML = parentChip + kidsHtml;
 
   // Active panel text
   if (activeId === "parent") {
