@@ -183,8 +183,12 @@ function updateNavProfileLabel() {
   const el = document.getElementById("navProfileLabel");
   if (!el) return;
   if (!user) { el.textContent = "Profile"; return; }
-  if (activeKid) { el.textContent = activeKid.name; return; }
-  el.textContent = parentProfile?.displayName || "Profile";
+  // If a child is active, show the child's name; otherwise show the parent's display name.
+  if (activeKid && activeKid.id !== "parent") {
+    el.textContent = activeKid.name || "Profile";
+    return;
+  }
+  el.textContent = (parentDoc && parentDoc.displayName) || user.displayName || "Profile";
 }
 
 function setActiveNav(btn) {
@@ -579,7 +583,7 @@ function renderKidsRow() {
           <path d="M10 44c1-9 9-14 14-14s13 5 14 14" fill="rgba(13,19,33,.35)"/>
         </svg>
       </div>
-      <div class="kidName">${escapeHTML(parentProfile?.displayName || "Parent")}</div>
+      <div class="kidName">${escapeHTML(parentDoc?.displayName || "Parent")}</div>
     </button>
   `;
 
@@ -602,7 +606,7 @@ function renderKidsRow() {
 
   // Active panel text
   if (activeId === "parent") {
-    els.activeKidName.textContent = parentProfile?.displayName || "Parent";
+    els.activeKidName.textContent = parentDoc?.displayName || "Parent";
     els.activeKidMeta.textContent = "Parent profile";
   } else if (activeKid) {
     els.activeKidName.textContent = activeKid.name;
