@@ -1,9 +1,5 @@
 // Paste your Firebase web app config here.
 // Firebase Console → Project settings → Your apps → SDK setup and configuration.
-//
-// IMPORTANT: This file must EXPORT the config object.
-// Do NOT paste the "initializeApp(...)" snippet from Firebase docs.
-
 export const firebaseConfig = {
   apiKey: "AIzaSyAGfjPCCmevZSySWkduIxthuMbB8oFW-oA",
   authDomain: "the-hidden-word-ffe4c.firebaseapp.com",

@@ -1066,22 +1066,44 @@ function renderProfile() {
 }
 
 async function doSignIn() {
-  if (!fbEnabled) return;
-  els.authMsg.textContent = "";
-  const email = (els.authEmail.value || "").trim();
-  const pass = (els.authPass.value || "").trim();
+  // Make it obvious something happened, even if Auth is blocked/misconfigured.
+  if (!fbEnabled) {
+    showAlert("Firebase not configured", "Firebase Auth isn't enabled in this build yet. Please paste your config into js/firebase-config.js and redeploy.");
+    return;
+  }
+  if (!auth) {
+    showAlert("Sign in failed", "Auth didn't initialize. Please refresh the page and check the console for Firebase import errors.");
+    return;
+  }
+
+  const email = (els.authEmail?.value || "").trim();
+  const pass = (els.authPass?.value || "").trim();
+
   if (!email || !pass) {
-    els.authMsg.textContent = "Please enter email + password.";
     showAlert("Missing info", "Please enter your email and password.");
     return;
   }
+
+  const btn = els.btnSignIn;
+  const oldLabel = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.textContent = "Signing in…"; }
+
   try {
     await signInWithEmailAndPassword(auth, email, pass);
-    els.authMsg.textContent = "";
-  } catch (e) {
-    const msg = friendlyAuthError(e);
-    els.authMsg.textContent = msg;
+
+    // Ensure parent doc exists so kids/progress can sync immediately.
+    await ensureParentDoc();
+
+    // If no active profile, default to parent (so the nav label updates immediately).
+    if (!getActiveProfileId()) setActiveProfileId("parent");
+
+    // Land the user on Profile so they can pick a child.
+    showView("profile");
+  } catch (err) {
+    const msg = friendlyAuthError(err);
     showAlert("Sign in failed", msg);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = oldLabel || "Sign in"; }
   }
 }
 
@@ -1274,6 +1296,11 @@ function wire() {
 
   els.btnSignIn.addEventListener("click", doSignIn);
   if (els.btnForgotPassword) els.btnForgotPassword.addEventListener("click", doForgotPassword);
+
+  // Allow Enter to sign in from the email/password fields (Safari-friendly).
+  const signInOnEnter = (e) => { if (e.key === "Enter") { e.preventDefault(); doSignIn(); } };
+  if (els.authEmail) els.authEmail.addEventListener("keydown", signInOnEnter);
+  if (els.authPass) els.authPass.addEventListener("keydown", signInOnEnter);
   els.btnSignUp.addEventListener("click", doSignUp);
   els.btnSignOut.addEventListener("click", doSignOut);
   els.btnAddKid.addEventListener("click", doAddKid);
