@@ -181,14 +181,20 @@ function pickDaily(dateStr) {
 
 function updateNavProfileLabel() {
   const el = document.getElementById("navProfileLabel");
-  if (!el) return;
-  if (!user) { el.textContent = "Profile"; return; }
+  const homeEl = document.getElementById("playingAsLabel");
+  const setLabel = (txt) => {
+    if (el) el.textContent = txt;
+    if (homeEl) homeEl.textContent = txt;
+  };
+
+  if (!el && !homeEl) return;
+  if (!user) { setLabel("Profile"); return; }
   // If a child is active, show the child's name; otherwise show the parent's display name.
   if (activeKid && activeKid.id !== "parent") {
-    el.textContent = activeKid.name || "Profile";
+    setLabel(activeKid.name || "Profile");
     return;
   }
-  el.textContent = (parentDoc && parentDoc.displayName) || user.displayName || "Profile";
+  setLabel((parentDoc && parentDoc.displayName) || user.displayName || "Profile");
 }
 
 function setActiveNav(btn) {
