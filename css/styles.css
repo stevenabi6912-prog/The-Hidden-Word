@@ -285,9 +285,6 @@ body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,
 .pill.wrong{background:rgba(239,68,68,.18)!important;border-color:rgba(239,68,68,.45)!important}
 
 /* ── Speech mode ─────────────────────────────────────────────────── */
-.speakToggleRow{margin-top:14px;text-align:center}
-.speakToggleBtn{font-size:13px}
-
 .speakPanel{margin-top:18px;display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px;border:1px solid rgba(0,0,0,.08);border-radius:20px;background:rgba(255,255,255,.82)}
 
 .speakHint{font-size:14px;color:var(--muted,#6b7280);text-align:center;max-width:420px;line-height:1.45}
@@ -305,3 +302,4 @@ body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,
 .sw--miss{background:rgba(239,68,68,.14);color:#b91c1c;text-decoration:line-through}
 
 .speakBtns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.speakExitBtn{font-size:12px;margin-top:4px;opacity:.7}

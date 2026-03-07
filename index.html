@@ -282,6 +282,7 @@
         <button class="soft" id="btnFullAttempt" type="button">I think I have it</button>
         <button class="soft" id="btnResetStep" type="button">Reset step</button>
         <button class="soft" id="btnStartOver" type="button">Start over</button>
+        <button class="soft" id="btnSpeakToggle" type="button">🎤 Speak it</button>
       </div>
 
       <div class="muted small" id="stepLabel">Step 1</div>
@@ -289,10 +290,6 @@
       <div class="wordRow" id="wordRow">
         <div class="muted small">Tap a word:</div>
         <div class="pills" id="pillRow"></div>
-      </div>
-
-      <div class="speakToggleRow">
-        <button class="soft speakToggleBtn" id="btnSpeakToggle" type="button">🎤 Switch to Speaking mode</button>
       </div>
 
       <div class="speakPanel" id="speakPanel" hidden>
@@ -303,6 +300,7 @@
           <button class="primary" id="speakAccept" type="button">Accept (close enough)</button>
           <button class="soft" id="speakRetry" type="button">Try again</button>
         </div>
+        <button class="soft speakExitBtn" id="btnSpeakExit" type="button">⌨️ Switch to Tapping mode</button>
       </div>
     </section>
   </main>

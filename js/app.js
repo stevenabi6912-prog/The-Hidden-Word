@@ -89,6 +89,7 @@ const els = {
   speakBtns: document.getElementById("speakBtns"),
   speakAccept: document.getElementById("speakAccept"),
   speakRetry: document.getElementById("speakRetry"),
+  btnSpeakExit: document.getElementById("btnSpeakExit"),
 
   // Profile/auth
   profileName: document.getElementById("profileName"),
@@ -177,6 +178,7 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 let speechMode = false;
 let recognition = null;
 let speechListening = false;
+let accumulatedTranscript = "";
 
 const BOLLS_API = "https://bolls.life/get-books";
 const BOLLS_TEXT_API = "https://bolls.life/get-text";
@@ -957,7 +959,6 @@ function enterSpeechMode() {
   els.speakBtns.hidden = true;
   els.speakResult.innerHTML = "";
   els.speakStatus.textContent = "Tap the microphone and recite the full verse.";
-  els.btnSpeakToggle.textContent = "⌨️ Switch to Tapping mode";
   stopListening();
 }
 
@@ -967,12 +968,11 @@ function exitSpeechMode() {
   els.tapControls.hidden = false;
   els.wordRow.hidden = false;
   els.speakPanel.hidden = true;
-  els.btnSpeakToggle.textContent = "🎤 Switch to Speaking mode";
 }
 
 function stopListening() {
   speechListening = false;
-  if (recognition) { try { recognition.stop(); } catch(_) {} }
+  if (recognition) { try { recognition.stop(); } catch(_) {} recognition = null; }
   if (els.speakMicBtn) els.speakMicBtn.classList.remove("micBtn--active");
 }
 
@@ -981,30 +981,46 @@ function startListening() {
     showAlert("Not supported", "Speech recognition is not supported in this browser. Try Chrome on desktop or Android.");
     return;
   }
-  if (speechListening) { stopListening(); return; }
 
+  // Tap again while listening → stop and evaluate
+  if (speechListening) {
+    stopListening();
+    if (accumulatedTranscript.trim()) {
+      handleSpeechResult(accumulatedTranscript.trim());
+    } else {
+      els.speakStatus.textContent = "No speech captured. Tap mic and try again.";
+    }
+    return;
+  }
+
+  accumulatedTranscript = "";
   recognition = new SpeechRecognition();
   recognition.lang = "en-US";
-  recognition.interimResults = false;
+  recognition.interimResults = true;   // show live partial text
   recognition.maxAlternatives = 1;
-  recognition.continuous = false;
+  recognition.continuous = true;       // keep going through pauses
 
   speechListening = true;
   els.speakMicBtn.classList.add("micBtn--active");
-  els.speakStatus.textContent = "Listening… speak clearly.";
+  els.speakStatus.textContent = "Listening… recite the verse, then tap mic to stop.";
   els.speakBtns.hidden = true;
   els.speakResult.innerHTML = "";
 
   recognition.onresult = (event) => {
-    const transcript = event.results[0]?.[0]?.transcript || "";
-    handleSpeechResult(transcript);
+    // Rebuild full transcript from all result segments
+    let full = "";
+    for (let i = 0; i < event.results.length; i++) {
+      full += event.results[i][0].transcript + " ";
+    }
+    accumulatedTranscript = full.trim();
+    // Show live preview in status while listening
+    els.speakStatus.textContent = `Hearing: "${accumulatedTranscript}"`;
   };
 
   recognition.onerror = (event) => {
+    if (event.error === "no-speech") return; // ignore — keep listening
     stopListening();
-    if (event.error === "no-speech") {
-      els.speakStatus.textContent = "No speech detected. Tap mic and try again.";
-    } else if (event.error === "not-allowed") {
+    if (event.error === "not-allowed") {
       showAlert("Microphone blocked", "Please allow microphone access in your browser settings, then try again.");
       exitSpeechMode();
     } else {
@@ -1013,8 +1029,16 @@ function startListening() {
   };
 
   recognition.onend = () => {
-    speechListening = false;
-    els.speakMicBtn.classList.remove("micBtn--active");
+    // Browser ended the session (timeout / lost focus). Evaluate what we have.
+    if (speechListening) {
+      speechListening = false;
+      els.speakMicBtn.classList.remove("micBtn--active");
+      if (accumulatedTranscript.trim()) {
+        handleSpeechResult(accumulatedTranscript.trim());
+      } else {
+        els.speakStatus.textContent = "Tap the microphone and recite the full verse.";
+      }
+    }
   };
 
   recognition.start();
@@ -1048,8 +1072,10 @@ els.btnSpeakToggle?.addEventListener("click", () => {
     showAlert("Not supported", "Speech recognition is not supported in this browser. Try Chrome on desktop or Android.");
     return;
   }
-  if (speechMode) exitSpeechMode(); else enterSpeechMode();
+  enterSpeechMode();
 });
+
+els.btnSpeakExit?.addEventListener("click", () => exitSpeechMode());
 
 els.speakMicBtn?.addEventListener("click", () => startListening());
 
@@ -1074,10 +1100,9 @@ function startGameInternal(verse, mode) {
   els.tapControls.hidden = false;
   els.wordRow.hidden = false;
   els.speakPanel.hidden = true;
-  if (els.btnSpeakToggle) els.btnSpeakToggle.textContent = "🎤 Switch to Speaking mode";
 
   els.gameRef.textContent = verse.ref;
-  els.gameMode.textContent = mode === "daily" ? `Today: ${todayISO()}` : "Practice (no streak)";
+  els.gameMode.textContent = `Today: ${todayISO()}`;
   setActiveNav(mode === "daily" ? els.navDaily : els.navPick);
   showView("game");
   renderStats();
@@ -1531,16 +1556,11 @@ async function onVerseComplete() {
 
   if (!activeKid) activeKid = emptyKid("Child");
 
-  let bonusXP = 0;
-  if (state.mode === "daily") {
-    const today = todayISO();
-    const already = activeKid.lastCompleted === today;
-    activeKid.streak = computeStreakNext(activeKid.streak || 0, activeKid.lastCompleted, today);
-    activeKid.lastCompleted = today;
-    bonusXP = already ? 10 : 50;
-  } else {
-    bonusXP = 20;
-  }
+  const today = todayISO();
+  const already = activeKid.lastCompleted === today;
+  activeKid.streak = computeStreakNext(activeKid.streak || 0, activeKid.lastCompleted, today);
+  activeKid.lastCompleted = today;
+  const bonusXP = already ? 10 : 50;
 
   activeKid.xp = (activeKid.xp || 0) + bonusXP;
   awardBadgesForKid(activeKid);
