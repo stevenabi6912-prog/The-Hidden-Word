@@ -184,7 +184,11 @@ const BADGES = [
 const LS_ACTIVE_KID = "thw_activeKidId";
 
 function stripHtmlTags(s){
-  return (s||"" ).toString().replace(/<[^>]*>/g, "").replace(/\s+/g," ").trim();
+  return (s||"").toString()
+    .replace(/<[^>]*>/g, "")        // remove HTML tags
+    .replace(/([a-zA-Z])\d+/g, "$1") // strip Strong's concordance numbers (e.g. beseech2065 → beseech)
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function escapeHTML(s) {
