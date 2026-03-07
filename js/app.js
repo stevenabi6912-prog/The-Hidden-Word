@@ -150,6 +150,11 @@ let completedCache = [];   // active child's completed list
 
 let state = null;          // game runtime state
 
+const BOLLS_API = "https://bolls.life/get-books";
+const BOLLS_TEXT_API = "https://bolls.life/get-text";
+const BOLLS_TRANSLATION = "KJV";
+const bibleState = { books: null, selectedBook: null, selectedChapter: null };
+
 const BADGES = [
   { id: "first", icon: "🌟", label: "First verse" },
   { id: "streak3", icon: "🔥", label: "3‑day streak" },
@@ -345,26 +350,26 @@ function renderBibleBooks(filter = "") {
     return;
   }
   els.bibleBooks.innerHTML = books.map(b => {
-    const active = bibleState.selectedBook === b.nr;
-    return `<button class="bibleBtn ${active ? "active" : ""}" type="button" data-book="${b.nr}">${escapeHTML(b.name)}</button>`;
+    const active = bibleState.selectedBook === b.bookid;
+    return `<button class="bibleBtn ${active ? "active" : ""}" type="button" data-book="${escapeHTML(b.bookid)}">${escapeHTML(b.name)}</button>`;
   }).join("");
   els.bibleBooks.querySelectorAll(".bibleBtn").forEach(btn => {
     btn.addEventListener("click", async () => {
-      const bookNr = Number(btn.getAttribute("data-book"));
-      if (!bookNr) return;
-      bibleState.selectedBook = bookNr;
+      const bookid = btn.getAttribute("data-book");
+      if (!bookid) return;
+      bibleState.selectedBook = bookid;
       bibleState.selectedChapter = null;
-      renderBibleBooks(els.bibleSearch.value || "");
-      await renderBibleChapters(bookNr);
+      renderBibleBooks(els.bibleSearch?.value || "");
+      await renderBibleChapters(bookid);
     });
   });
 }
 
-async function renderBibleChapters(bookNr) {
+async function renderBibleChapters(bookid) {
   els.bibleChapters.innerHTML = `<div class="empty">Loading chapters…</div>`;
   els.bibleVerses.innerHTML = `<div class="empty">Pick a chapter.</div>`;
   try {
-    const list = await ensureBibleChapters(bookNr);
+    const list = await ensureBibleChapters(bookid);
     if (!list.length) {
       els.bibleChapters.innerHTML = `<div class="empty">No chapters found.</div>`;
       return;
@@ -378,9 +383,8 @@ async function renderBibleChapters(bookNr) {
         const ch = Number(btn.getAttribute("data-ch"));
         if (!ch) return;
         bibleState.selectedChapter = ch;
-        // Repaint active styles
-        await renderBibleChapters(bookNr);
-        await renderBibleVerses(bookNr, ch);
+        await renderBibleChapters(bookid);
+        await renderBibleVerses(bookid, ch);
       });
     });
   } catch (e) {
@@ -406,12 +410,11 @@ function extractVersesFromChapterJson(chJson){
 }
 
 
-async function renderBibleVerses(bookNr, chapterNr) {
+async function renderBibleVerses(bookid, chapterNr) {
   els.bibleVerses.innerHTML = `<div class="empty">Loading verses…</div>`;
   try {
-    const data = await getBibleChapter(bookNr, chapterNr);
-    const verses = extractVersesFromChapterJson(data);
-    const bookName = (bibleState.books || []).find(b => b.nr === bookNr)?.name || `Book ${bookNr}`;
+    const verses = await getBibleChapter(bookid, chapterNr);
+    const bookName = (bibleState.books || []).find(b => b.bookid === String(bookid))?.name || `Book ${bookid}`;
     if (!verses.length) {
       els.bibleVerses.innerHTML = `<div class="empty">No verses found.</div>`;
       return;
@@ -442,9 +445,17 @@ async function renderBibleVerses(bookNr, chapterNr) {
 }
 
 
+async function ensureBibleChapters(bookid) {
+  await ensureBibleBooks();
+  const book = (bibleState.books || []).find(b => b.bookid === String(bookid));
+  if (!book) return [];
+  const n = Number(book.chapters || 0);
+  return Array.from({ length: n }, (_, i) => i + 1);
+}
+
 async function ensureBibleBooks(){
   if (bibleState.books && bibleState.books.length) return;
-  const url = `${BOLLS_API}/get-books/${BOLLS_TRANSLATION}/`;
+  const url = `${BOLLS_API}/${BOLLS_TRANSLATION}/`;
   const res = await fetch(url, { cache: "force-cache" });
   if (!res.ok) throw new Error(`Bible books failed: ${res.status}`);
   const data = await res.json();
@@ -457,7 +468,7 @@ async function ensureBibleBooks(){
 }
 
 async function getBibleChapter(bookid, chapter){
-  const url = `${BOLLS_API}/get-text/${BOLLS_TRANSLATION}/${encodeURIComponent(bookid)}/${encodeURIComponent(chapter)}/`;
+  const url = `${BOLLS_TEXT_API}/${BOLLS_TRANSLATION}/${encodeURIComponent(bookid)}/${encodeURIComponent(chapter)}/`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`Bible chapter failed: ${res.status}`);
   const data = await res.json();
@@ -470,7 +481,7 @@ async function getBibleChapter(bookid, chapter){
 }
 async function initBiblePicker() {
   if (!els.bibleBooks) return;
-  if (bibleState.books) return; // already loaded
+  if (bibleState.books && bibleState.books.length) return; // already loaded
 
   if (els.bibleHelp) els.bibleHelp.textContent = "Loading Bible index...";
   try {
@@ -682,8 +693,8 @@ function renderGame() {
             state.revealed = new Set(state.snap.revealed);
             state.snap = null;
             state.hint = null;
+            renderGame();
           }
-          renderGame();
         }, 500);
       }
     });
@@ -739,6 +750,40 @@ function startGame(verse, mode) {
 function freshDailyStart(verse) { startGame(verse, "daily"); }
 
 /* FAMILY DATA */
+function activeProfileDocData() {
+  if (activeKid && activeKid.id === "parent") {
+    return {
+      displayName: parentDoc?.displayName || user?.displayName || "Parent",
+      xp: activeKid.xp || 0,
+      streak: activeKid.streak || 0,
+      lastCompleted: activeKid.lastCompleted || null,
+      badges: activeKid.badges || {},
+    };
+  }
+  return null;
+}
+
+async function loadCompletedForProfile(profileId) {
+  if (!fbEnabled || !user) return [];
+  const col = profileId === "parent" ? collection(db, "users", user.uid, "completed") : collection(db, "users", user.uid, "kids", profileId, "completed");
+  const qy = query(col, orderBy("at", "desc"), limit(500));
+  const snap = await getDocs(qy);
+  const items = [];
+  snap.forEach(docu => { const d = docu.data(); if (d && d.key) items.push(d); });
+  return items;
+}
+
+function makeParentProfile() {
+  return {
+    id: "parent",
+    name: parentDoc?.displayName || user?.displayName || "Parent",
+    xp: Number.isFinite(+(parentDoc?.xp)) ? +(parentDoc?.xp) : 0,
+    streak: Number.isFinite(+(parentDoc?.streak)) ? +(parentDoc?.streak) : 0,
+    lastCompleted: typeof parentDoc?.lastCompleted === "string" ? parentDoc.lastCompleted : null,
+    badges: (parentDoc?.badges && typeof parentDoc.badges === "object") ? parentDoc.badges : {},
+  };
+}
+
 function emptyKid(name="Child") {
   return { id: "local", name, xp: 0, streak: 0, lastCompleted: null, badges: {} };
 }
@@ -908,13 +953,23 @@ async function ensureParentDoc() {
   if (!snap.exists()) {
     await setDoc(ref, {
       displayName: name,
+      xp: 0,
+      streak: 0,
+      lastCompleted: null,
+      badges: {},
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }, { merge: true });
-    parentDoc = { displayName: name };
+    parentDoc = { displayName: name, xp: 0, streak: 0, lastCompleted: null, badges: {} };
   } else {
     const d = snap.data() || {};
-    parentDoc = { displayName: d.displayName || name };
+    parentDoc = {
+      displayName: d.displayName || name,
+      xp: Number.isFinite(+d.xp) ? +d.xp : 0,
+      streak: Number.isFinite(+d.streak) ? +d.streak : 0,
+      lastCompleted: typeof d.lastCompleted === "string" ? d.lastCompleted : null,
+      badges: (d.badges && typeof d.badges === "object") ? d.badges : {},
+    };
   }
 }
 
@@ -967,11 +1022,21 @@ async function loadCompletedForKid(kidId) {
 
 async function setActiveKidById(kidId) {
   if (!kidId) return;
+  if (kidId === "parent") {
+    activeKid = makeParentProfile();
+    setActiveProfileId("parent");
+    completedCache = await loadCompletedForProfile("parent");
+    awardBadgesForKid(activeKid);
+    renderProfile();
+    renderKidsRow();
+    renderStats();
+    return;
+  }
   const found = kids.find(k => k.id === kidId);
   if (!found) return;
   activeKid = { ...found };
-  localStorage.setItem(LS_ACTIVE_KID, kidId);
-  completedCache = await loadCompletedForKid(kidId);
+  setActiveProfileId(kidId);
+  completedCache = await loadCompletedForProfile(kidId);
   awardBadgesForKid(activeKid);
   renderProfile();
   renderKidsRow();
@@ -1003,37 +1068,49 @@ async function deleteKidProfile(kidId) {
 async function loadParentAndKids() {
   await ensureParentDoc();
   kids = await listKids();
-  // If no kids exist yet, we’ll ask the parent to add one.
 
-  const saved = localStorage.getItem(LS_ACTIVE_KID);
-  if (saved === "parent" || !kids.length) {
-    activeKid = null;
-    localStorage.setItem(LS_ACTIVE_KID, "parent");
+  const saved = getActiveProfileId();
+  if (saved === "parent" || !saved || !kids.length) {
+    activeKid = makeParentProfile();
+    setActiveProfileId("parent");
+    completedCache = await loadCompletedForProfile("parent");
+    awardBadgesForKid(activeKid);
   } else {
-    const pickId = (saved && kids.some(k => k.id === saved)) ? saved : kids[0].id;
-    await setActiveKidById(pickId);
+    const pickId = kids.some(k => k.id === saved) ? saved : "parent";
+    if (pickId === "parent") {
+      activeKid = makeParentProfile();
+      setActiveProfileId("parent");
+      completedCache = await loadCompletedForProfile("parent");
+      awardBadgesForKid(activeKid);
+    } else {
+      await setActiveKidById(pickId);
+    }
   }
 }
 
 async function saveActiveKidDoc() {
   if (!fbEnabled || !user || !activeKid || !activeKid.id) return;
-  const ref = doc(db, "users", user.uid, "kids", activeKid.id);
-  await updateDoc(ref, {
+  if (activeKid.id === "parent") {
+    const payload = activeProfileDocData() || { displayName: parentDoc?.displayName || user?.displayName || "Parent", xp:0, streak:0, lastCompleted:null, badges:{} };
+    await setDoc(doc(db, "users", user.uid), { ...payload, updatedAt: serverTimestamp() }, { merge: true });
+    parentDoc = { ...parentDoc, ...payload };
+    return;
+  }
+  await setDoc(doc(db, "users", user.uid, "kids", activeKid.id), {
     name: activeKid.name,
     xp: activeKid.xp,
     streak: activeKid.streak,
     lastCompleted: activeKid.lastCompleted,
     badges: activeKid.badges || {},
     updatedAt: serverTimestamp(),
-  });
-  // keep local kids list in sync
+  }, { merge: true });
   kids = kids.map(k => k.id === activeKid.id ? { ...activeKid } : k);
 }
 
 async function saveCompletedToCloud(verse, atISO) {
   if (!fbEnabled || !user || !activeKid?.id) return;
   const id = hashId(getVerseKey(verse));
-  const ref = doc(db, "users", user.uid, "kids", activeKid.id, "completed", id);
+  const ref = activeKid.id === "parent" ? doc(db, "users", user.uid, "completed", id) : doc(db, "users", user.uid, "kids", activeKid.id, "completed", id);
   await setDoc(ref, {
     key: getVerseKey(verse),
     ref: verse.ref,
