@@ -135,6 +135,15 @@ body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,
 .badge{display:flex;align-items:center;gap:8px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:999px;padding:8px 10px;font-weight:900}
 .badgeIcon{width:26px;height:26px;border-radius:999px;display:grid;place-items:center;background:linear-gradient(135deg,#e9d5ff,#cffafe);}
 .badgeLabel{font-size:12px}
+/* Badges page */
+.badgesPageGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-top:14px}
+.badgeCard{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:18px;padding:16px 10px;text-align:center;transition:transform .08s ease,box-shadow .08s ease;}
+.badgeCard:not(.badgeCard--locked){box-shadow:0 6px 18px rgba(124,58,237,.12);}
+.badgeCard--locked{opacity:.38;filter:grayscale(1);}
+.badgeCardIcon{font-size:28px;line-height:1}
+.badgeCardLabel{font-size:12px;font-weight:900}
+.badgeCardDesc{font-size:11px;color:var(--muted);line-height:1.3}
+.badgeLock{position:absolute;top:8px;right:10px;font-size:11px;opacity:.6}
 .profileGrid{display:grid;grid-template-columns:1fr 1.2fr;gap:14px;margin-top:12px}
 @media (max-width:860px){.profileGrid{grid-template-columns:1fr}}
 .profileCard,.authCard{border:1px solid rgba(0,0,0,.08);background:#ffffffcc;border-radius:18px;padding:12px}

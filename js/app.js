@@ -35,13 +35,16 @@ const els = {
   navDaily: document.getElementById("navDaily"),
   navPick: document.getElementById("navPick"),
   navVerses: document.getElementById("navVerses"),
+  navBadges: document.getElementById("navBadges"),
   navProfile: document.getElementById("navProfile"),
 
   viewHome: document.getElementById("viewHome"),
   viewPick: document.getElementById("viewPick"),
   viewVerses: document.getElementById("viewVerses"),
+  viewBadges: document.getElementById("viewBadges"),
   viewGame: document.getElementById("viewGame"),
   viewProfile: document.getElementById("viewProfile"),
+  badgesPageGrid: document.getElementById("badgesPageGrid"),
 
   streakHome: document.getElementById("streakHome"),
   completedHome: document.getElementById("completedHome"),
@@ -165,11 +168,37 @@ const BOLLS_TRANSLATION = "KJV";
 const bibleState = { books: null, selectedBook: null, selectedChapter: null };
 
 const BADGES = [
-  { id: "first", icon: "🌟", label: "First verse" },
-  { id: "streak3", icon: "🔥", label: "3‑day streak" },
-  { id: "streak7", icon: "🏅", label: "7‑day streak" },
-  { id: "verses10", icon: "📚", label: "10 verses" },
+  // Verse count
+  { id: "first",     icon: "🌱", label: "First Steps",        desc: "Complete your first verse" },
+  { id: "verses5",   icon: "📖", label: "Diligent Reader",    desc: "Complete 5 verses" },
+  { id: "verses10",  icon: "📚", label: "Scripture Student",  desc: "Complete 10 verses" },
+  { id: "verses25",  icon: "✨", label: "Silver Tongue",      desc: "Complete 25 verses" },
+  { id: "verses50",  icon: "🕊️", label: "Faithful Keeper",   desc: "Complete 50 verses" },
+  { id: "verses100", icon: "🏆", label: "Word Warrior",       desc: "Complete 100 verses" },
+  { id: "verses200", icon: "👑", label: "Scripture Master",   desc: "Complete 200 verses" },
+  { id: "verses365", icon: "🎖️", label: "Year in the Word",  desc: "Complete 365 verses" },
+  // Streaks
+  { id: "streak3",   icon: "🔥", label: "On Fire",            desc: "Reach a 3‑day streak" },
+  { id: "streak7",   icon: "💪", label: "Weekly Devotion",    desc: "Reach a 7‑day streak" },
+  { id: "streak14",  icon: "⚡", label: "Fortnight Faithful", desc: "Reach a 14‑day streak" },
+  { id: "streak30",  icon: "🌟", label: "Monthly Disciple",   desc: "Reach a 30‑day streak" },
+  { id: "streak60",  icon: "💎", label: "Diamond Dedication", desc: "Reach a 60‑day streak" },
+  { id: "streak100", icon: "🏅", label: "Century of Grace",   desc: "Reach a 100‑day streak" },
+  // Books & testament
+  { id: "ot",        icon: "📜", label: "Ancient Paths",      desc: "Complete an Old Testament verse" },
+  { id: "nt",        icon: "✝️", label: "New Covenant",       desc: "Complete a New Testament verse" },
+  { id: "psalms",    icon: "🎵", label: "Song of David",      desc: "Complete a verse from Psalms" },
+  { id: "proverbs",  icon: "💡", label: "Wisdom Seeker",      desc: "Complete a verse from Proverbs" },
+  { id: "gospels",   icon: "🕊️", label: "Gospel Bearer",     desc: "Complete a verse from all four Gospels" },
+  { id: "bookworm",  icon: "📕", label: "Many Books",         desc: "Complete verses from 10 different books" },
 ];
+
+const NT_BOOKS = new Set(["Matthew","Mark","Luke","John","Acts","Romans",
+  "1 Corinthians","2 Corinthians","Galatians","Ephesians","Philippians",
+  "Colossians","1 Thessalonians","2 Thessalonians","1 Timothy","2 Timothy",
+  "Titus","Philemon","Hebrews","James","1 Peter","2 Peter",
+  "1 John","2 John","3 John","Jude","Revelation"
+]);
 
 
   // Active profile helpers (parent or child id). Stored in LS_ACTIVE_KID.
@@ -265,7 +294,7 @@ function updateNavProfileLabel() {
 }
 
 function setActiveNav(btn) {
-  for (const b of [els.navHome, els.navDaily, els.navPick, els.navVerses, els.navProfile]) {
+  for (const b of [els.navHome, els.navDaily, els.navPick, els.navVerses, els.navBadges, els.navProfile]) {
     b.classList.toggle("isActive", b === btn);
   }
 }
@@ -290,6 +319,7 @@ function showView(name) {
   els.viewHome.hidden = name !== "home";
   els.viewPick.hidden = name !== "pick";
   els.viewVerses.hidden = name !== "verses";
+  els.viewBadges.hidden = name !== "badges";
   els.viewGame.hidden = name !== "game";
   els.viewProfile.hidden = name !== "profile";
 }
@@ -376,6 +406,21 @@ function renderBadges(targetEl, badgesObj) {
       <div class="badgeLabel">${escapeHTML(b.label)}</div>
     </div>
   `).join("");
+}
+
+function renderBadgesPage() {
+  if (!els.badgesPageGrid) return;
+  const owned = activeKid?.badges || {};
+  els.badgesPageGrid.innerHTML = BADGES.map(b => {
+    const earned = !!owned[b.id];
+    return `
+      <div class="badgeCard ${earned ? "" : "badgeCard--locked"}" title="${escapeHTML(b.desc)}">
+        <div class="badgeCardIcon">${escapeHTML(b.icon)}</div>
+        <div class="badgeCardLabel">${escapeHTML(b.label)}</div>
+        <div class="badgeCardDesc">${escapeHTML(b.desc)}</div>
+        ${earned ? "" : '<div class="badgeLock">🔒</div>'}
+      </div>`;
+  }).join("");
 }
 
 function renderStats() {
@@ -880,10 +925,39 @@ function computeStreakNext(current, lastCompleted, dateStr) {
 }
 function awardBadgesForKid(kid) {
   const badges = kid.badges || {};
-  if (completedCache.length >= 1) badges.first = true;
-  if ((kid.streak || 0) >= 3) badges.streak3 = true;
-  if ((kid.streak || 0) >= 7) badges.streak7 = true;
-  if (completedCache.length >= 10) badges.verses10 = true;
+  const n = completedCache.length;
+  const streak = kid.streak || 0;
+
+  // Verse count
+  if (n >= 1)   badges.first     = true;
+  if (n >= 5)   badges.verses5   = true;
+  if (n >= 10)  badges.verses10  = true;
+  if (n >= 25)  badges.verses25  = true;
+  if (n >= 50)  badges.verses50  = true;
+  if (n >= 100) badges.verses100 = true;
+  if (n >= 200) badges.verses200 = true;
+  if (n >= 365) badges.verses365 = true;
+
+  // Streaks
+  if (streak >= 3)   badges.streak3   = true;
+  if (streak >= 7)   badges.streak7   = true;
+  if (streak >= 14)  badges.streak14  = true;
+  if (streak >= 30)  badges.streak30  = true;
+  if (streak >= 60)  badges.streak60  = true;
+  if (streak >= 100) badges.streak100 = true;
+
+  // Book-based (derived from completed refs)
+  const books = new Set(completedCache.map(x => (x.ref || "").replace(/\s+\d+:\d+$/, "").trim()));
+  const gospels = ["Matthew","Mark","Luke","John"];
+
+  for (const book of books) {
+    if (NT_BOOKS.has(book)) badges.nt = true; else badges.ot = true;
+    if (book === "Psalms" || book === "Psalm") badges.psalms = true;
+    if (book === "Proverbs") badges.proverbs = true;
+  }
+  if (gospels.every(g => books.has(g))) badges.gospels = true;
+  if (books.size >= 10) badges.bookworm = true;
+
   kid.badges = badges;
 }
 
@@ -1489,6 +1563,11 @@ function wire() {
     els.bibleSearch?.focus();
   });
 
+  els.navBadges.addEventListener("click", () => {
+    setActiveNav(els.navBadges);
+    showView("badges");
+    renderBadgesPage();
+  });
   els.navVerses.addEventListener("click", () => {
     setActiveNav(els.navVerses);
     showView("verses");
