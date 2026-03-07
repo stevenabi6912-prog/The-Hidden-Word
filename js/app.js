@@ -833,6 +833,20 @@ function renderGame() {
     return;
   }
 
+  if (speechMode) {
+    els.pillRow.innerHTML = "";
+    const remaining = currentHiddenSlice().filter(i => !state.revealed.has(i));
+    const wordCount = remaining.filter(i => isWordToken(state.tokens[i])).length;
+    els.speakStatus.textContent = state.fullAttempt
+      ? "Tap the microphone and recite the full verse from memory."
+      : wordCount === 1
+        ? "Tap the microphone and say the missing word."
+        : `Tap the microphone and say the ${wordCount} missing words in order.`;
+    els.speakResult.innerHTML = "";
+    els.speakBtns.hidden = true;
+    return;
+  }
+
   const built = buildPills();
   if (!built) return;
   const { correctWord, correctIdx, pills } = built;
@@ -959,19 +973,18 @@ function speechDiff(spoken, target) {
 
 function enterSpeechMode() {
   speechMode = true;
-  els.tapControls.hidden = true;
+  // Keep tapControls visible so "I think I have it" is accessible
   els.wordRow.hidden = true;
   els.speakPanel.hidden = false;
   els.speakBtns.hidden = true;
   els.speakResult.innerHTML = "";
-  els.speakStatus.textContent = "Tap the microphone and recite the full verse.";
+  els.speakStatus.textContent = "Tap the microphone and say the missing word(s).";
   stopListening();
 }
 
 function exitSpeechMode() {
   speechMode = false;
   stopListening();
-  els.tapControls.hidden = false;
   els.wordRow.hidden = false;
   els.speakPanel.hidden = true;
 }
@@ -1054,20 +1067,45 @@ function handleSpeechResult(transcript) {
   stopListening();
   if (!state) return;
 
-  const target = state.verse.text;
-  const { pct, html } = speechDiff(transcript, target);
+  // Full-verse attempt — triggered by "I think I have it"
+  if (state.fullAttempt) {
+    const { pct, html } = speechDiff(transcript, state.verse.text);
+    els.speakResult.innerHTML = html;
+    if (pct >= 90) {
+      els.speakStatus.textContent = `Great! ${pct}% match — verse complete!`;
+      els.speakBtns.hidden = true;
+      onVerseComplete().finally(() => celebrateAndGoHome());
+    } else if (pct >= 60) {
+      els.speakStatus.textContent = `${pct}% match — good effort! Accept or try again.`;
+      els.speakBtns.hidden = false;
+    } else {
+      els.speakStatus.textContent = `${pct}% match — keep practising! Tap mic to try again.`;
+      els.speakBtns.hidden = false;
+    }
+    return;
+  }
 
+  // Step-by-step: match against only the current step's missing words
+  const remaining = currentHiddenSlice().filter(i => !state.revealed.has(i));
+  const expectedText = remaining.map(i => state.tokens[i]).filter(t => isWordToken(t)).join(" ");
+  if (!expectedText) return;
+
+  const { pct, html } = speechDiff(transcript, expectedText);
   els.speakResult.innerHTML = html;
 
-  if (pct >= 90) {
-    els.speakStatus.textContent = `Great! ${pct}% match — verse complete!`;
+  if (pct >= 80) {
     els.speakBtns.hidden = true;
-    onVerseComplete().finally(() => celebrateAndGoHome());
-  } else if (pct >= 60) {
-    els.speakStatus.textContent = `${pct}% match — good effort! Accept or try again.`;
+    for (const idx of remaining) state.revealed.add(idx);
+    if (activeKid) {
+      activeKid.xp = Math.max(0, Number(activeKid.xp || 0)) + 2 * Math.max(1, remaining.length);
+      renderStats();
+    }
+    setTimeout(() => { if (speechMode) renderGame(); }, 500);
+  } else if (pct >= 50) {
+    els.speakStatus.textContent = `${pct}% — close! Accept or tap mic to try again.`;
     els.speakBtns.hidden = false;
   } else {
-    els.speakStatus.textContent = `${pct}% match — keep practising! Tap mic to try again.`;
+    els.speakStatus.textContent = `${pct}% — tap mic and try again.`;
     els.speakBtns.hidden = false;
   }
 }
@@ -1087,13 +1125,28 @@ els.speakMicBtn?.addEventListener("click", () => startListening());
 
 els.speakAccept?.addEventListener("click", () => {
   els.speakBtns.hidden = true;
-  onVerseComplete().finally(() => celebrateAndGoHome());
+  if (state?.fullAttempt) {
+    onVerseComplete().finally(() => celebrateAndGoHome());
+  } else {
+    // Accept step — reveal current words and advance
+    const remaining = currentHiddenSlice().filter(i => !state.revealed.has(i));
+    for (const idx of remaining) state.revealed.add(idx);
+    setTimeout(() => { if (speechMode) renderGame(); }, 300);
+  }
 });
 
 els.speakRetry?.addEventListener("click", () => {
   els.speakBtns.hidden = true;
   els.speakResult.innerHTML = "";
-  els.speakStatus.textContent = "Tap the microphone and recite the full verse.";
+  if (state?.fullAttempt) {
+    els.speakStatus.textContent = "Tap the microphone and recite the full verse from memory.";
+  } else {
+    const remaining = currentHiddenSlice().filter(i => !state?.revealed.has(i));
+    const count = remaining.filter(i => isWordToken(state.tokens[i])).length;
+    els.speakStatus.textContent = count === 1
+      ? "Tap the microphone and say the missing word."
+      : `Tap the microphone and say the ${count} missing words in order.`;
+  }
 });
 
 /* ── End speech mode ─────────────────────────────────────────────── */
