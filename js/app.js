@@ -46,6 +46,10 @@ const els = {
   streakHome: document.getElementById("streakHome"),
   completedHome: document.getElementById("completedHome"),
   xpHome: document.getElementById("xpHome"),
+  levelHome: document.getElementById("levelHome"),
+  levelLabelHome: document.getElementById("levelLabelHome"),
+  xpNextHome: document.getElementById("xpNextHome"),
+  xpBarFillHome: document.getElementById("xpBarFillHome"),
   badgeRowHome: document.getElementById("badgeRowHome"),
 
   homeDaily: document.getElementById("homeDaily"),
@@ -82,6 +86,11 @@ const els = {
   kidName: document.getElementById("kidName"),
   btnAddKid: document.getElementById("btnAddKid"),
   badgeRowProfile: document.getElementById("badgeRowProfile"),
+  levelProfile: document.getElementById("levelProfile"),
+  xpProfile: document.getElementById("xpProfile"),
+  levelLabelProfile: document.getElementById("levelLabelProfile"),
+  xpNextProfile: document.getElementById("xpNextProfile"),
+  xpBarFillProfile: document.getElementById("xpBarFillProfile"),
 
   btnSignOut: document.getElementById("btnSignOut"),
   authCard: document.getElementById("authCard"),
@@ -295,6 +304,102 @@ function renderToday() {
   els.todayText.textContent = todayVerse.text;
 }
 
+
+function levelInfoFromXP(xp) {
+  const safeXP = Math.max(0, Number(xp || 0));
+  let level = 1;
+  let prevTotal = 0;
+  let total = 100;
+  while (safeXP >= total) {
+    level += 1;
+    prevTotal = total;
+    total += 75 + (level * 25);
+  }
+  return {
+    level,
+    xpIntoLevel: safeXP - prevTotal,
+    xpNeeded: total - prevTotal,
+    progressPct: Math.max(0, Math.min(100, ((safeXP - prevTotal) / Math.max(1, total - prevTotal)) * 100)),
+  };
+}
+
+function renderXPUI(xp) {
+  const info = levelInfoFromXP(xp);
+  if (els.levelHome) els.levelHome.textContent = String(info.level);
+  if (els.levelLabelHome) els.levelLabelHome.textContent = `Level ${info.level}`;
+  if (els.xpNextHome) els.xpNextHome.textContent = `${info.xpIntoLevel} / ${info.xpNeeded} XP`;
+  if (els.xpBarFillHome) els.xpBarFillHome.style.width = `${info.progressPct}%`;
+  if (els.levelProfile) els.levelProfile.textContent = String(info.level);
+  if (els.xpProfile) els.xpProfile.textContent = String(Math.max(0, Number(xp || 0)));
+  if (els.levelLabelProfile) els.levelLabelProfile.textContent = `Level ${info.level}`;
+  if (els.xpNextProfile) els.xpNextProfile.textContent = `${info.xpIntoLevel} / ${info.xpNeeded} XP`;
+  if (els.xpBarFillProfile) els.xpBarFillProfile.style.width = `${info.progressPct}%`;
+}
+
+function floatXP(amount, anchorEl) {
+  if (!amount || amount <= 0) return;
+  const el = document.createElement("div");
+  el.className = "floatingXp";
+  el.textContent = `+${amount} XP`;
+  document.body.appendChild(el);
+  let x = window.innerWidth / 2;
+  let y = 120;
+  if (anchorEl && anchorEl.getBoundingClientRect) {
+    const r = anchorEl.getBoundingClientRect();
+    x = r.left + r.width / 2;
+    y = r.top + window.scrollY - 8;
+  }
+  el.style.left = `${Math.max(12, x - 35)}px`;
+  el.style.top = `${Math.max(12, y)}px`;
+  setTimeout(() => el.remove(), 900);
+}
+
+function activeProfileDocData() {
+  if (activeKid && activeKid.id === "parent") {
+    return {
+      displayName: parentDoc?.displayName || user?.displayName || "Parent",
+      xp: activeKid.xp || 0,
+      streak: activeKid.streak || 0,
+      lastCompleted: activeKid.lastCompleted || null,
+      badges: activeKid.badges || {},
+    };
+  }
+  return null;
+}
+
+function makeParentProfile() {
+  return {
+    id: "parent",
+    name: parentDoc?.displayName || user?.displayName || "Parent",
+    xp: Number.isFinite(+(parentDoc?.xp)) ? +(parentDoc?.xp) : 0,
+    streak: Number.isFinite(+(parentDoc?.streak)) ? +(parentDoc?.streak) : 0,
+    lastCompleted: typeof parentDoc?.lastCompleted === "string" ? parentDoc.lastCompleted : null,
+    badges: (parentDoc?.badges && typeof parentDoc.badges === "object") ? parentDoc.badges : {},
+  };
+}
+
+async function loadCompletedForProfile(profileId) {
+  if (!fbEnabled || !user) return [];
+  const col = profileId === "parent"
+    ? collection(db, "users", user.uid, "completed")
+    : collection(db, "users", user.uid, "kids", profileId, "completed");
+  const qy = query(col, orderBy("at", "desc"), limit(500));
+  const snap = await getDocs(qy);
+  const items = [];
+  snap.forEach(docu => {
+    const d = docu.data();
+    if (d && d.key) items.push(d);
+  });
+  return items;
+}
+
+async function ensureBibleChapters(bookid) {
+  await ensureBibleBooks();
+  const book = (bibleState.books || []).find(b => b.bookid === String(bookid));
+  if (!book) return [];
+  return Array.from({ length: Number(book.chapters || 0) }, (_, i) => i + 1);
+}
+
 function renderBadges(targetEl, badgesObj) {
   if (!targetEl) return;
   const owned = badgesObj || {};
@@ -321,6 +426,7 @@ function renderStats() {
   els.completedHome.textContent = String(completedCache.length);
   renderBadges(els.badgeRowHome, activeKid?.badges);
   renderBadges(els.badgeRowProfile, activeKid?.badges);
+  renderXPUI(xp);
 }
 
 function renderHomeStats() {
@@ -356,7 +462,6 @@ function renderBibleBooks(filter = "") {
   els.bibleBooks.querySelectorAll(".bibleBtn").forEach(btn => {
     btn.addEventListener("click", async () => {
       const bookid = btn.getAttribute("data-book");
-      if (!bookid) return;
       bibleState.selectedBook = bookid;
       bibleState.selectedChapter = null;
       renderBibleBooks(els.bibleSearch?.value || "");
@@ -381,7 +486,6 @@ async function renderBibleChapters(bookid) {
     els.bibleChapters.querySelectorAll(".bibleBtn").forEach(btn => {
       btn.addEventListener("click", async () => {
         const ch = Number(btn.getAttribute("data-ch"));
-        if (!ch) return;
         bibleState.selectedChapter = ch;
         await renderBibleChapters(bookid);
         await renderBibleVerses(bookid, ch);
@@ -389,7 +493,7 @@ async function renderBibleChapters(bookid) {
     });
   } catch (e) {
     console.error(e);
-    els.bibleChapters.innerHTML = `<div class="empty">Couldn't load chapters. Check your connection.</div>`;
+    els.bibleChapters.innerHTML = `<div class="empty">Couldn't load chapters.</div>`;
   }
 }
 
@@ -423,12 +527,7 @@ async function renderBibleVerses(bookid, chapterNr) {
       const vn = (v.verse ?? v.nr ?? v.v ?? "").toString();
       const text = (v.text ?? v.verseText ?? v.t ?? "").toString();
       const ref = `${bookName} ${chapterNr}:${vn}`;
-      return `
-        <button class="verseBtn" type="button" data-ref="${escapeHTML(ref)}" data-text="${escapeHTML(text)}">
-          <span class="vn">${escapeHTML(vn)}</span>
-          <span class="vt">${escapeHTML(text)}</span>
-        </button>
-      `;
+      return `<button class="verseBtn" type="button" data-ref="${escapeHTML(ref)}" data-text="${escapeHTML(text)}"><span class="vn">${escapeHTML(vn)}</span><span class="vt">${escapeHTML(text)}</span></button>`;
     }).join("");
     els.bibleVerses.querySelectorAll(".verseBtn").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -454,17 +553,18 @@ async function ensureBibleChapters(bookid) {
 }
 
 async function ensureBibleBooks(){
-  if (bibleState.books && bibleState.books.length) return;
+  if (bibleState.books && bibleState.books.length) return bibleState.books;
   const url = `${BOLLS_API}/${BOLLS_TRANSLATION}/`;
-  const res = await fetch(url, { cache: "force-cache" });
-  if (!res.ok) throw new Error(`Bible books failed: ${res.status}`);
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`HTTP ${res.status} loading Bible books`);
   const data = await res.json();
-  // Expected shape: [{ bookid: "01", book: "Genesis", chapters: 50 }, ...]
-  bibleState.books = (Array.isArray(data) ? data : []).map(b => ({
-    bookid: String(b.bookid ?? b.nr ?? b.id ?? "").trim() || String(b.bookId ?? "").trim(),
-    name: String(b.book ?? b.name ?? "").trim(),
-    chapters: Number(b.chapters ?? b.chapterCount ?? 0) || 0,
-  })).filter(b => b.bookid && b.name);
+  const items = Array.isArray(data) ? data : (Array.isArray(data?.books) ? data.books : []);
+  bibleState.books = items.map((b, idx) => ({
+    bookid: String(b.bookid ?? b.id ?? idx + 1),
+    name: String(b.name ?? b.book_name ?? b.bookName ?? ""),
+    chapters: Number(b.chapters ?? b.chapter_count ?? b.nr_chapters ?? 0),
+  })).filter(b => b.name);
+  return bibleState.books;
 }
 
 async function getBibleChapter(bookid, chapter){
@@ -480,20 +580,24 @@ async function getBibleChapter(bookid, chapter){
   return verses;
 }
 async function initBiblePicker() {
-  if (!els.bibleBooks) return;
-  if (bibleState.books && bibleState.books.length) return; // already loaded
-
-  if (els.bibleHelp) els.bibleHelp.textContent = "Loading Bible index...";
   try {
-    await ensureBibleBooks();
-    if (els.bibleHelp) els.bibleHelp.textContent = "Tip: click a book → chapter → verse.";
-    renderBibleBooks(els.bibleSearch.value || "");
-    els.bibleChapters.innerHTML = `<div class="empty">Pick a book.</div>`;
-    els.bibleVerses.innerHTML = `<div class="empty">Pick a chapter.</div>`;
+    if (!els.bibleBooks || !els.bibleChapters || !els.bibleVerses) return;
+    if (!bibleState.books || !bibleState.books.length) {
+      els.bibleBooks.innerHTML = `<div class="empty">Loading books…</div>`;
+      els.bibleChapters.innerHTML = `<div class="empty">Pick a book.</div>`;
+      els.bibleVerses.innerHTML = `<div class="empty">Pick a chapter.</div>`;
+      await ensureBibleBooks();
+    }
+    renderBibleBooks(els.bibleSearch?.value || "");
+    if (bibleState.selectedBook) {
+      await renderBibleChapters(bibleState.selectedBook);
+      if (bibleState.selectedChapter) {
+        await renderBibleVerses(bibleState.selectedBook, bibleState.selectedChapter);
+      }
+    }
   } catch (e) {
-    console.error(e);
-    if (els.bibleHelp) els.bibleHelp.textContent = "Couldn't load the Bible index. Check your connection.";
-    els.bibleBooks.innerHTML = `<div class="empty">Bible index failed to load.</div>`;
+    console.error("initBiblePicker failed:", e);
+    if (els.bibleBooks) els.bibleBooks.innerHTML = `<div class="empty">Couldn't load Bible books.</div>`;
   }
 }
 
@@ -653,6 +757,11 @@ function renderGame() {
     state.hint = null;
     state.fullAttempt = false;
     state.snap = null;
+    if (activeKid) {
+      activeKid.xp = Math.max(0, Number(activeKid.xp || 0)) + 3;
+      renderStats();
+      floatXP(3, els.stepLabel);
+    }
     renderGame();
     return;
   }
@@ -678,6 +787,11 @@ function renderGame() {
 
       if (ok) {
         state.revealed.add(correctIdx);
+        if (activeKid) {
+          activeKid.xp = Math.max(0, Number(activeKid.xp || 0)) + 2;
+          renderStats();
+          floatXP(2, btn);
+        }
         setTimeout(() => {
           state.locked = false;
           renderGame();
@@ -686,7 +800,6 @@ function renderGame() {
         setTimeout(() => {
           btn.classList.remove("wrong");
           state.locked = false;
-
           if (state.fullAttempt && state.snap) {
             state.fullAttempt = false;
             state.step = state.snap.step;
@@ -695,7 +808,7 @@ function renderGame() {
             state.hint = null;
             renderGame();
           }
-        }, 500);
+        }, 650);
       }
     });
   });
@@ -1070,32 +1183,41 @@ async function loadParentAndKids() {
   kids = await listKids();
 
   const saved = getActiveProfileId();
-  if (saved === "parent" || !saved || !kids.length) {
+  if (!saved || saved === "parent") {
     activeKid = makeParentProfile();
     setActiveProfileId("parent");
     completedCache = await loadCompletedForProfile("parent");
     awardBadgesForKid(activeKid);
+    return;
+  }
+
+  const found = kids.find(k => k.id === saved);
+  if (found) {
+    await setActiveKidById(saved);
   } else {
-    const pickId = kids.some(k => k.id === saved) ? saved : "parent";
-    if (pickId === "parent") {
-      activeKid = makeParentProfile();
-      setActiveProfileId("parent");
-      completedCache = await loadCompletedForProfile("parent");
-      awardBadgesForKid(activeKid);
-    } else {
-      await setActiveKidById(pickId);
-    }
+    activeKid = makeParentProfile();
+    setActiveProfileId("parent");
+    completedCache = await loadCompletedForProfile("parent");
+    awardBadgesForKid(activeKid);
   }
 }
 
 async function saveActiveKidDoc() {
   if (!fbEnabled || !user || !activeKid || !activeKid.id) return;
+
   if (activeKid.id === "parent") {
-    const payload = activeProfileDocData() || { displayName: parentDoc?.displayName || user?.displayName || "Parent", xp:0, streak:0, lastCompleted:null, badges:{} };
-    await setDoc(doc(db, "users", user.uid), { ...payload, updatedAt: serverTimestamp() }, { merge: true });
+    const payload = activeProfileDocData() || {
+      displayName: parentDoc?.displayName || user?.displayName || "Parent",
+      xp: 0, streak: 0, lastCompleted: null, badges: {}
+    };
+    await setDoc(doc(db, "users", user.uid), {
+      ...payload,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
     parentDoc = { ...parentDoc, ...payload };
     return;
   }
+
   await setDoc(doc(db, "users", user.uid, "kids", activeKid.id), {
     name: activeKid.name,
     xp: activeKid.xp,
@@ -1104,13 +1226,17 @@ async function saveActiveKidDoc() {
     badges: activeKid.badges || {},
     updatedAt: serverTimestamp(),
   }, { merge: true });
+
   kids = kids.map(k => k.id === activeKid.id ? { ...activeKid } : k);
 }
 
 async function saveCompletedToCloud(verse, atISO) {
   if (!fbEnabled || !user || !activeKid?.id) return;
   const id = hashId(getVerseKey(verse));
-  const ref = activeKid.id === "parent" ? doc(db, "users", user.uid, "completed", id) : doc(db, "users", user.uid, "kids", activeKid.id, "completed", id);
+  const ref = activeKid.id === "parent"
+    ? doc(db, "users", user.uid, "completed", id)
+    : doc(db, "users", user.uid, "kids", activeKid.id, "completed", id);
+
   await setDoc(ref, {
     key: getVerseKey(verse),
     ref: verse.ref,
@@ -1130,18 +1256,21 @@ async function onVerseComplete() {
 
   if (!activeKid) activeKid = emptyKid("Child");
 
+  let bonusXP = 0;
   if (state.mode === "daily") {
     const today = todayISO();
     const already = activeKid.lastCompleted === today;
     activeKid.streak = computeStreakNext(activeKid.streak || 0, activeKid.lastCompleted, today);
     activeKid.lastCompleted = today;
-    if (!already) activeKid.xp = (activeKid.xp || 0) + 50;
+    bonusXP = already ? 10 : 50;
   } else {
-    activeKid.xp = (activeKid.xp || 0) + 10;
+    bonusXP = 20;
   }
 
+  activeKid.xp = (activeKid.xp || 0) + bonusXP;
   awardBadgesForKid(activeKid);
   renderStats();
+  floatXP(bonusXP, els.gameRef);
 
   await saveCompletedToCloud(state.verse, atISO);
   await saveActiveKidDoc();
