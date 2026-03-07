@@ -877,17 +877,26 @@ async function initFirebase() {
   els.firebaseStatus.textContent = "Firebase configured ✅";
 
   onAuthStateChanged(auth, async (u) => {
-    user = u;
-    if (user) {
-      await loadParentAndKids();
-    } else {
-      parentDoc = null;
-      kids = [];
-      activeKid = null;
-      completedCache = [];
-      renderProfile();
-      renderKidsRow();
-      renderStats();
+    try {
+      user = u;
+      if (user) {
+        await loadParentAndKids();
+        renderProfile();
+        renderKidsRow();
+        renderStats();
+      } else {
+        parentDoc = null;
+        kids = [];
+        activeKid = null;
+        completedCache = [];
+        renderProfile();
+        renderKidsRow();
+        renderStats();
+      }
+    } catch (err) {
+      console.error("Auth state sync failed:", err);
+      const msg = friendlyAuthError(err) || safeErrorMessage(err);
+      showAlert("Sync error", msg);
     }
   });
 }
@@ -1076,7 +1085,6 @@ function renderProfile() {
 }
 
 async function doSignIn() {
-  // Make it obvious something happened, even if Auth is blocked/misconfigured.
   if (!fbEnabled) {
     showAlert("Firebase not configured", "Firebase Auth isn't enabled in this build yet. Please paste your config into js/firebase-config.js and redeploy.");
     return;
@@ -1095,25 +1103,51 @@ async function doSignIn() {
   }
 
   const btn = els.btnSignIn;
-  const oldLabel = btn ? btn.textContent : "";
-  if (btn) { btn.disabled = true; btn.textContent = "Signing in…"; }
+  const oldLabel = btn ? btn.textContent : "Sign in";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Signing in…";
+  }
 
   try {
-    await signInWithEmailAndPassword(auth, email, pass);
+    const cred = await signInWithEmailAndPassword(auth, email, pass);
 
-    // Ensure parent doc exists so kids/progress can sync immediately.
-    await ensureParentDoc();
+    // Make the signed-in user immediately available to the rest of the app.
+    user = cred.user;
 
-    // If no active profile, default to parent (so the nav label updates immediately).
-    if (!getActiveProfileId()) setActiveProfileId("parent");
+    // Default to the parent profile right after sign-in.
+    setActiveProfileId("parent");
 
-    // Land the user on Profile so they can pick a child.
+    // Pull parent/kid data now, and surface any failures visibly.
+    await loadParentAndKids();
+
+    renderProfile();
+    renderKidsRow();
+    renderStats();
+    setActiveNav(els.navProfile);
     showView("profile");
   } catch (err) {
-    const msg = friendlyAuthError(err);
+    console.error("Sign in failed:", err);
+    const msg = friendlyAuthError(err) || safeErrorMessage(err);
     showAlert("Sign in failed", msg);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = oldLabel || "Sign in"; }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = oldLabel || "Sign in";
+    }
+  }
+}
+
+
+function safeErrorMessage(err) {
+  if (!err) return "An unknown error occurred.";
+  if (typeof err === "string") return err;
+  if (err.message) return String(err.message);
+  if (err.code) return String(err.code);
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
   }
 }
 
@@ -1313,6 +1347,12 @@ function wire() {
   if (els.authPass) els.authPass.addEventListener("keydown", signInOnEnter);
   els.btnSignUp.addEventListener("click", doSignUp);
   els.btnSignOut.addEventListener("click", doSignOut);
+  els.authEmail?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") doSignIn();
+  });
+  els.authPass?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") doSignIn();
+  });
   els.btnAddKid.addEventListener("click", doAddKid);
 }
 
