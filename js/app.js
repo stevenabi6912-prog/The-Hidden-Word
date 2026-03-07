@@ -927,26 +927,32 @@ function normalizeForSpeech(s) {
 function speechDiff(spoken, target) {
   const spokenWords = normalizeForSpeech(spoken).split(" ").filter(Boolean);
   const targetWords = normalizeForSpeech(target).split(" ").filter(Boolean);
-  let matched = 0;
-  const usedSpoken = new Array(spokenWords.length).fill(false);
-
-  // Count matched words (order-aware sliding window approach)
-  let si = 0;
-  for (let ti = 0; ti < targetWords.length; ti++) {
-    while (si < spokenWords.length && spokenWords[si] !== targetWords[ti]) si++;
-    if (si < spokenWords.length) { matched++; usedSpoken[si] = true; si++; }
+  // LCS to find best in-order match, so one missed word doesn't wipe out all subsequent matches
+  const n = spokenWords.length, m = targetWords.length;
+  const dp = Array.from({ length: n + 1 }, () => new Int16Array(m + 1));
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      dp[i][j] = spokenWords[i - 1] === targetWords[j - 1]
+        ? dp[i - 1][j - 1] + 1
+        : Math.max(dp[i - 1][j], dp[i][j - 1]);
+    }
   }
 
-  const pct = targetWords.length ? Math.round((matched / targetWords.length) * 100) : 0;
+  const matched = dp[n][m];
+  const pct = m ? Math.round((matched / m) * 100) : 0;
 
-  // Build highlighted HTML: walk target words and mark each as hit or miss
-  const targetNorm = targetWords;
-  let sj = 0;
-  const html = targetNorm.map(tw => {
-    while (sj < spokenWords.length && spokenWords[sj] !== tw) sj++;
-    if (sj < spokenWords.length) { sj++; return `<span class="sw sw--ok">${escapeHTML(tw)}</span>`; }
-    return `<span class="sw sw--miss">${escapeHTML(tw)}</span>`;
-  }).join(" ");
+  // Backtrack to find which target-word positions were matched
+  const matchedIdx = new Set();
+  let i = n, j = m;
+  while (i > 0 && j > 0) {
+    if (spokenWords[i - 1] === targetWords[j - 1]) { matchedIdx.add(j - 1); i--; j--; }
+    else if (dp[i - 1][j] >= dp[i][j - 1]) i--;
+    else j--;
+  }
+
+  const html = targetWords.map((tw, idx) =>
+    `<span class="sw ${matchedIdx.has(idx) ? "sw--ok" : "sw--miss"}">${escapeHTML(tw)}</span>`
+  ).join(" ");
 
   return { pct, html };
 }
