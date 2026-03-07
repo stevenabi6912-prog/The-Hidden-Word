@@ -185,8 +185,10 @@ const LS_ACTIVE_KID = "thw_activeKidId";
 
 function stripHtmlTags(s){
   return (s||"").toString()
-    .replace(/<[^>]*>/g, "")        // remove HTML tags
-    .replace(/([a-zA-Z])\d+/g, "$1") // strip Strong's concordance numbers (e.g. beseech2065 → beseech)
+    .replace(/<sup[^>]*>.*?<\/sup>/gi, "") // remove translator's notes
+    .replace(/<S>\d+<\/S>/gi, "")          // remove Strong's number tags e.g. <S>3069</S>
+    .replace(/<[^>]*>/g, "")               // remove any remaining HTML tags
+    .replace(/\d+/g, "")                   // strip any leftover digits
     .replace(/\s+/g, " ")
     .trim();
 }
