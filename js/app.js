@@ -1232,17 +1232,7 @@ function renderKidsRow() {
   els.kidsRow.querySelectorAll(".kidBtn").forEach(btn => {
     btn.addEventListener("click", async (e) => {
       const id = btn.getAttribute("data-kid");
-      if (id === "parent") {
-        activeKid = null;
-        localStorage.setItem(LS_ACTIVE_KID, "parent");
-        renderKidsRow();
-        renderBadges(els.badgeRowHome, activeKid?.badges);
-        renderBadges(els.badgeRowProfile, activeKid?.badges);
-        renderHomeStats();
-        updateNavProfileLabel();
-        return;
-      }
-      await setActiveKidById(id);
+      await setActiveKidById(id || "parent");
     });
   });
 
