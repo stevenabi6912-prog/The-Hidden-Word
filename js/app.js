@@ -522,7 +522,7 @@ async function ensureBibleBooks(){
     bookid: String(b.bookid ?? b.id ?? idx + 1),
     name: String(b.name ?? b.book_name ?? b.bookName ?? ""),
     chapters: Number(b.chapters ?? b.chapter_count ?? b.nr_chapters ?? 0),
-  })).filter(b => b.name);
+  })).filter(b => b.name && Number(b.bookid) >= 1 && Number(b.bookid) <= 66);
   return bibleState.books;
 }
 
