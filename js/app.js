@@ -79,6 +79,16 @@ const els = {
   btnResetStep: document.getElementById("btnResetStep"),
   btnStartOver: document.getElementById("btnStartOver"),
   stepLabel: document.getElementById("stepLabel"),
+  tapControls: document.getElementById("tapControls"),
+  wordRow: document.getElementById("wordRow"),
+  btnSpeakToggle: document.getElementById("btnSpeakToggle"),
+  speakPanel: document.getElementById("speakPanel"),
+  speakStatus: document.getElementById("speakStatus"),
+  speakMicBtn: document.getElementById("speakMicBtn"),
+  speakResult: document.getElementById("speakResult"),
+  speakBtns: document.getElementById("speakBtns"),
+  speakAccept: document.getElementById("speakAccept"),
+  speakRetry: document.getElementById("speakRetry"),
 
   // Profile/auth
   profileName: document.getElementById("profileName"),
@@ -161,6 +171,12 @@ let activeKid = null;      // active child doc
 let completedCache = [];   // active child's completed list
 
 let state = null;          // game runtime state
+
+// Speech mode
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+let speechMode = false;
+let recognition = null;
+let speechListening = false;
 
 const BOLLS_API = "https://bolls.life/get-books";
 const BOLLS_TEXT_API = "https://bolls.life/get-text";
@@ -895,8 +911,171 @@ function startOver() {
   state.snap = null;
   renderGame();
 }
+/* ── Speech mode ──────────────────────────────────────────────────── */
+
+function isSpeechSupported() { return !!SpeechRecognition; }
+
+function normalizeForSpeech(s) {
+  return s.toLowerCase()
+    .replace(/[^a-z0-9\s']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function speechDiff(spoken, target) {
+  const spokenWords = normalizeForSpeech(spoken).split(" ").filter(Boolean);
+  const targetWords = normalizeForSpeech(target).split(" ").filter(Boolean);
+  let matched = 0;
+  const usedSpoken = new Array(spokenWords.length).fill(false);
+
+  // Count matched words (order-aware sliding window approach)
+  let si = 0;
+  for (let ti = 0; ti < targetWords.length; ti++) {
+    while (si < spokenWords.length && spokenWords[si] !== targetWords[ti]) si++;
+    if (si < spokenWords.length) { matched++; usedSpoken[si] = true; si++; }
+  }
+
+  const pct = targetWords.length ? Math.round((matched / targetWords.length) * 100) : 0;
+
+  // Build highlighted HTML: walk target words and mark each as hit or miss
+  const targetNorm = targetWords;
+  let sj = 0;
+  const html = targetNorm.map(tw => {
+    while (sj < spokenWords.length && spokenWords[sj] !== tw) sj++;
+    if (sj < spokenWords.length) { sj++; return `<span class="sw sw--ok">${escapeHTML(tw)}</span>`; }
+    return `<span class="sw sw--miss">${escapeHTML(tw)}</span>`;
+  }).join(" ");
+
+  return { pct, html };
+}
+
+function enterSpeechMode() {
+  speechMode = true;
+  els.tapControls.hidden = true;
+  els.wordRow.hidden = true;
+  els.speakPanel.hidden = false;
+  els.speakBtns.hidden = true;
+  els.speakResult.innerHTML = "";
+  els.speakStatus.textContent = "Tap the microphone and recite the full verse.";
+  els.btnSpeakToggle.textContent = "⌨️ Switch to Tapping mode";
+  stopListening();
+}
+
+function exitSpeechMode() {
+  speechMode = false;
+  stopListening();
+  els.tapControls.hidden = false;
+  els.wordRow.hidden = false;
+  els.speakPanel.hidden = true;
+  els.btnSpeakToggle.textContent = "🎤 Switch to Speaking mode";
+}
+
+function stopListening() {
+  speechListening = false;
+  if (recognition) { try { recognition.stop(); } catch(_) {} }
+  if (els.speakMicBtn) els.speakMicBtn.classList.remove("micBtn--active");
+}
+
+function startListening() {
+  if (!isSpeechSupported()) {
+    showAlert("Not supported", "Speech recognition is not supported in this browser. Try Chrome on desktop or Android.");
+    return;
+  }
+  if (speechListening) { stopListening(); return; }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.continuous = false;
+
+  speechListening = true;
+  els.speakMicBtn.classList.add("micBtn--active");
+  els.speakStatus.textContent = "Listening… speak clearly.";
+  els.speakBtns.hidden = true;
+  els.speakResult.innerHTML = "";
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0]?.[0]?.transcript || "";
+    handleSpeechResult(transcript);
+  };
+
+  recognition.onerror = (event) => {
+    stopListening();
+    if (event.error === "no-speech") {
+      els.speakStatus.textContent = "No speech detected. Tap mic and try again.";
+    } else if (event.error === "not-allowed") {
+      showAlert("Microphone blocked", "Please allow microphone access in your browser settings, then try again.");
+      exitSpeechMode();
+    } else {
+      els.speakStatus.textContent = `Error: ${event.error}. Tap mic and try again.`;
+    }
+  };
+
+  recognition.onend = () => {
+    speechListening = false;
+    els.speakMicBtn.classList.remove("micBtn--active");
+  };
+
+  recognition.start();
+}
+
+function handleSpeechResult(transcript) {
+  stopListening();
+  if (!state) return;
+
+  const target = state.verse.text;
+  const { pct, html } = speechDiff(transcript, target);
+
+  els.speakResult.innerHTML = html;
+
+  if (pct >= 90) {
+    els.speakStatus.textContent = `Great! ${pct}% match — verse complete!`;
+    els.speakBtns.hidden = true;
+    onVerseComplete().finally(() => celebrateAndGoHome());
+  } else if (pct >= 60) {
+    els.speakStatus.textContent = `${pct}% match — good effort! Accept or try again.`;
+    els.speakBtns.hidden = false;
+  } else {
+    els.speakStatus.textContent = `${pct}% match — keep practising! Tap mic to try again.`;
+    els.speakBtns.hidden = false;
+  }
+}
+
+/* ── Speech event listeners ───────────────────────────────────────── */
+els.btnSpeakToggle?.addEventListener("click", () => {
+  if (!isSpeechSupported()) {
+    showAlert("Not supported", "Speech recognition is not supported in this browser. Try Chrome on desktop or Android.");
+    return;
+  }
+  if (speechMode) exitSpeechMode(); else enterSpeechMode();
+});
+
+els.speakMicBtn?.addEventListener("click", () => startListening());
+
+els.speakAccept?.addEventListener("click", () => {
+  els.speakBtns.hidden = true;
+  onVerseComplete().finally(() => celebrateAndGoHome());
+});
+
+els.speakRetry?.addEventListener("click", () => {
+  els.speakBtns.hidden = true;
+  els.speakResult.innerHTML = "";
+  els.speakStatus.textContent = "Tap the microphone and recite the full verse.";
+});
+
+/* ── End speech mode ─────────────────────────────────────────────── */
+
 function startGameInternal(verse, mode) {
   state = initState(verse, mode);
+  // Reset speech mode on every new game
+  speechMode = false;
+  stopListening();
+  els.tapControls.hidden = false;
+  els.wordRow.hidden = false;
+  els.speakPanel.hidden = true;
+  if (els.btnSpeakToggle) els.btnSpeakToggle.textContent = "🎤 Switch to Speaking mode";
+
   els.gameRef.textContent = verse.ref;
   els.gameMode.textContent = mode === "daily" ? `Today: ${todayISO()}` : "Practice (no streak)";
   setActiveNav(mode === "daily" ? els.navDaily : els.navPick);

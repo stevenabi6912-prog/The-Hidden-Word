@@ -277,18 +277,32 @@
 
       <div class="verseBox" id="verseBox"></div>
 
-      <div class="controls">
+      <div class="controls" id="tapControls">
         <button class="primary" id="btnHint" type="button">Hint: next word</button>
         <button class="soft" id="btnFullAttempt" type="button">I think I have it</button>
         <button class="soft" id="btnResetStep" type="button">Reset step</button>
         <button class="soft" id="btnStartOver" type="button">Start over</button>
-</div>
+      </div>
 
       <div class="muted small" id="stepLabel">Step 1</div>
 
-      <div class="wordRow">
+      <div class="wordRow" id="wordRow">
         <div class="muted small">Tap a word:</div>
         <div class="pills" id="pillRow"></div>
+      </div>
+
+      <div class="speakToggleRow">
+        <button class="soft speakToggleBtn" id="btnSpeakToggle" type="button">🎤 Switch to Speaking mode</button>
+      </div>
+
+      <div class="speakPanel" id="speakPanel" hidden>
+        <div class="speakHint" id="speakStatus">Tap the microphone and recite the full verse.</div>
+        <button class="micBtn" id="speakMicBtn" type="button" aria-label="Start listening">🎤</button>
+        <div class="speakResult" id="speakResult"></div>
+        <div class="speakBtns" id="speakBtns" hidden>
+          <button class="primary" id="speakAccept" type="button">Accept (close enough)</button>
+          <button class="soft" id="speakRetry" type="button">Try again</button>
+        </div>
       </div>
     </section>
   </main>
