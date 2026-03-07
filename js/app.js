@@ -1098,6 +1098,17 @@ async function loadCompletedForKid(kidId) {
   return items;
 }
 
+function makeParentProfile() {
+  return {
+    id: "parent",
+    name: parentDoc?.displayName || user?.displayName || "Parent",
+    xp: parentDoc?.xp ?? 0,
+    streak: parentDoc?.streak ?? 0,
+    lastCompleted: parentDoc?.lastCompleted ?? null,
+    badges: parentDoc?.badges ?? {},
+  };
+}
+
 async function setActiveKidById(kidId) {
   if (!kidId) return;
   if (kidId === "parent") {
