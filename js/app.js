@@ -1194,6 +1194,17 @@ async function loadParentAndKids() {
   }
 }
 
+function activeProfileDocData() {
+  if (!activeKid) return null;
+  return {
+    displayName: parentDoc?.displayName || user?.displayName || "Parent",
+    xp: activeKid.xp ?? 0,
+    streak: activeKid.streak ?? 0,
+    lastCompleted: activeKid.lastCompleted ?? null,
+    badges: activeKid.badges || {},
+  };
+}
+
 async function saveActiveKidDoc() {
   if (!fbEnabled || !user || !activeKid || !activeKid.id) return;
 
