@@ -1098,6 +1098,21 @@ async function loadCompletedForKid(kidId) {
   return items;
 }
 
+async function loadCompletedForProfile(profileId) {
+  if (profileId === "parent") {
+    const col = collection(db, "users", user.uid, "completed");
+    const qy = query(col, orderBy("at", "desc"), limit(500));
+    const snap = await getDocs(qy);
+    const items = [];
+    snap.forEach(docu => {
+      const d = docu.data();
+      if (d && d.key) items.push(d);
+    });
+    return items;
+  }
+  return loadCompletedForKid(profileId);
+}
+
 function makeParentProfile() {
   return {
     id: "parent",
