@@ -217,7 +217,7 @@ body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,
 
 
 /* Ensure [hidden] works for modal overlays */
-.modalOverlay[hidden]{display:none !important;}
+.modalOverlay[hidden],.speakPanel[hidden],.speakBtns[hidden]{display:none !important;}
 
 
 /* Kids row chips */
