@@ -1207,6 +1207,7 @@ function makeParentProfile() {
 async function setActiveKidById(kidId) {
   if (!kidId) return;
   if (kidId === "parent") {
+    await ensureParentDoc(); // re-fetch fresh parent data from Firestore
     activeKid = makeParentProfile();
     setActiveProfileId("parent");
     completedCache = await loadCompletedForProfile("parent");
@@ -1216,9 +1217,21 @@ async function setActiveKidById(kidId) {
     renderStats();
     return;
   }
-  const found = kids.find(k => k.id === kidId);
-  if (!found) return;
-  activeKid = { ...found };
+  // Re-fetch this kid's doc fresh from Firestore instead of using stale cache
+  const kidRef = doc(db, "users", user.uid, "kids", kidId);
+  const kidSnap = await getDoc(kidRef);
+  if (!kidSnap.exists()) return;
+  const d = kidSnap.data() || {};
+  activeKid = {
+    id: kidId,
+    name: d.name || "Child",
+    xp: Number.isFinite(+d.xp) ? +d.xp : 0,
+    streak: Number.isFinite(+d.streak) ? +d.streak : 0,
+    lastCompleted: typeof d.lastCompleted === "string" ? d.lastCompleted : null,
+    badges: (d.badges && typeof d.badges === "object") ? d.badges : {},
+  };
+  // Keep local cache in sync
+  kids = kids.map(k => k.id === kidId ? { ...activeKid } : k);
   setActiveProfileId(kidId);
   completedCache = await loadCompletedForProfile(kidId);
   awardBadgesForKid(activeKid);
