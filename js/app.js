@@ -289,7 +289,7 @@ function showView(name) {
 }
 
 async function loadVerses() {
-  const url = new URL("data/verses.json", window.location.href);
+  const url = new URL("verses.json", window.location.href);
   const res = await fetch(url.toString(), { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status} loading ${url}`);
   const data = await res.json();
@@ -354,51 +354,7 @@ function floatXP(amount, anchorEl) {
   setTimeout(() => el.remove(), 900);
 }
 
-function activeProfileDocData() {
-  if (activeKid && activeKid.id === "parent") {
-    return {
-      displayName: parentDoc?.displayName || user?.displayName || "Parent",
-      xp: activeKid.xp || 0,
-      streak: activeKid.streak || 0,
-      lastCompleted: activeKid.lastCompleted || null,
-      badges: activeKid.badges || {},
-    };
-  }
-  return null;
-}
 
-function makeParentProfile() {
-  return {
-    id: "parent",
-    name: parentDoc?.displayName || user?.displayName || "Parent",
-    xp: Number.isFinite(+(parentDoc?.xp)) ? +(parentDoc?.xp) : 0,
-    streak: Number.isFinite(+(parentDoc?.streak)) ? +(parentDoc?.streak) : 0,
-    lastCompleted: typeof parentDoc?.lastCompleted === "string" ? parentDoc.lastCompleted : null,
-    badges: (parentDoc?.badges && typeof parentDoc.badges === "object") ? parentDoc.badges : {},
-  };
-}
-
-async function loadCompletedForProfile(profileId) {
-  if (!fbEnabled || !user) return [];
-  const col = profileId === "parent"
-    ? collection(db, "users", user.uid, "completed")
-    : collection(db, "users", user.uid, "kids", profileId, "completed");
-  const qy = query(col, orderBy("at", "desc"), limit(500));
-  const snap = await getDocs(qy);
-  const items = [];
-  snap.forEach(docu => {
-    const d = docu.data();
-    if (d && d.key) items.push(d);
-  });
-  return items;
-}
-
-async function ensureBibleChapters(bookid) {
-  await ensureBibleBooks();
-  const book = (bibleState.books || []).find(b => b.bookid === String(bookid));
-  if (!book) return [];
-  return Array.from({ length: Number(book.chapters || 0) }, (_, i) => i + 1);
-}
 
 function renderBadges(targetEl, badgesObj) {
   if (!targetEl) return;
@@ -555,8 +511,7 @@ async function ensureBibleChapters(bookid) {
 async function ensureBibleBooks(){
   if (bibleState.books && bibleState.books.length) return bibleState.books;
   const url = `${BOLLS_API}/${BOLLS_TRANSLATION}/`;
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error(`HTTP ${res.status} loading Bible books`);
+  const res = await fetch(url, { cache: "default" });
   const data = await res.json();
   const items = Array.isArray(data) ? data : (Array.isArray(data?.books) ? data.books : []);
   bibleState.books = items.map((b, idx) => ({
@@ -569,7 +524,7 @@ async function ensureBibleBooks(){
 
 async function getBibleChapter(bookid, chapter){
   const url = `${BOLLS_TEXT_API}/${BOLLS_TRANSLATION}/${encodeURIComponent(bookid)}/${encodeURIComponent(chapter)}/`;
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(url, { cache: "default" });
   if (!res.ok) throw new Error(`Bible chapter failed: ${res.status}`);
   const data = await res.json();
   // Expected shape: [{ pk: 1, verse: 1, text: "In the beginning..." }, ...]
@@ -579,6 +534,49 @@ async function getBibleChapter(bookid, chapter){
   })).filter(v => v.verse && v.text);
   return verses;
 }
+async function bibleTryDirectReference(q) {
+  // Match references like "John 3:16" or "1 John 3:16"
+  const match = q.match(/^(.+?)\s+(\d+):(\d+)$/);
+  if (!match) {
+    if (els.bibleHelp) els.bibleHelp.textContent = 'Try a reference like "John 3:16" or browse a book above.';
+    return;
+  }
+  const bookQuery = match[1].trim().toLowerCase();
+  const chapterNr = Number(match[2]);
+  const verseNr = Number(match[3]);
+  try {
+    await ensureBibleBooks();
+    const book = (bibleState.books || []).find(b => b.name.toLowerCase().startsWith(bookQuery) || b.name.toLowerCase() === bookQuery);
+    if (!book) {
+      if (els.bibleHelp) els.bibleHelp.textContent = `Book "${match[1]}" not found. Try spelling it out (e.g. "Psalms" not "Ps").`;
+      return;
+    }
+    bibleState.selectedBook = book.bookid;
+    bibleState.selectedChapter = chapterNr;
+    renderBibleBooks(els.bibleSearch?.value || "");
+    await renderBibleChapters(book.bookid);
+    await renderBibleVerses(book.bookid, chapterNr);
+    // Scroll to/highlight the specific verse
+    setTimeout(() => {
+      const btns = els.bibleVerses?.querySelectorAll(".verseBtn");
+      if (btns) {
+        btns.forEach(btn => {
+          const ref = btn.getAttribute("data-ref") || "";
+          if (ref.endsWith(`:${verseNr}`)) {
+            btn.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            btn.classList.add("highlight");
+            setTimeout(() => btn.classList.remove("highlight"), 2000);
+          }
+        });
+      }
+    }, 300);
+    if (els.bibleHelp) els.bibleHelp.textContent = "";
+  } catch (e) {
+    console.error("Direct reference lookup failed:", e);
+    if (els.bibleHelp) els.bibleHelp.textContent = "Couldn't find that reference. Try browsing manually.";
+  }
+}
+
 async function initBiblePicker() {
   try {
     if (!els.bibleBooks || !els.bibleChapters || !els.bibleVerses) return;
@@ -863,40 +861,6 @@ function startGame(verse, mode) {
 function freshDailyStart(verse) { startGame(verse, "daily"); }
 
 /* FAMILY DATA */
-function activeProfileDocData() {
-  if (activeKid && activeKid.id === "parent") {
-    return {
-      displayName: parentDoc?.displayName || user?.displayName || "Parent",
-      xp: activeKid.xp || 0,
-      streak: activeKid.streak || 0,
-      lastCompleted: activeKid.lastCompleted || null,
-      badges: activeKid.badges || {},
-    };
-  }
-  return null;
-}
-
-async function loadCompletedForProfile(profileId) {
-  if (!fbEnabled || !user) return [];
-  const col = profileId === "parent" ? collection(db, "users", user.uid, "completed") : collection(db, "users", user.uid, "kids", profileId, "completed");
-  const qy = query(col, orderBy("at", "desc"), limit(500));
-  const snap = await getDocs(qy);
-  const items = [];
-  snap.forEach(docu => { const d = docu.data(); if (d && d.key) items.push(d); });
-  return items;
-}
-
-function makeParentProfile() {
-  return {
-    id: "parent",
-    name: parentDoc?.displayName || user?.displayName || "Parent",
-    xp: Number.isFinite(+(parentDoc?.xp)) ? +(parentDoc?.xp) : 0,
-    streak: Number.isFinite(+(parentDoc?.streak)) ? +(parentDoc?.streak) : 0,
-    lastCompleted: typeof parentDoc?.lastCompleted === "string" ? parentDoc.lastCompleted : null,
-    badges: (parentDoc?.badges && typeof parentDoc.badges === "object") ? parentDoc.badges : {},
-  };
-}
-
 function emptyKid(name="Child") {
   return { id: "local", name, xp: 0, streak: 0, lastCompleted: null, badges: {} };
 }
@@ -988,7 +952,8 @@ function renderKidsRow() {
         activeKid = null;
         localStorage.setItem(LS_ACTIVE_KID, "parent");
         renderKidsRow();
-        renderBadges();
+        renderBadges(els.badgeRowHome, activeKid?.badges);
+        renderBadges(els.badgeRowProfile, activeKid?.badges);
         renderHomeStats();
         updateNavProfileLabel();
         return;
@@ -1173,7 +1138,8 @@ async function deleteKidProfile(kidId) {
   }
 
   renderKidsRow();
-  renderBadges();
+  renderBadges(els.badgeRowHome, activeKid?.badges);
+  renderBadges(els.badgeRowProfile, activeKid?.badges);
   renderHomeStats();
   updateNavProfileLabel();
 }
@@ -1529,7 +1495,7 @@ function wire() {
     const q = (els.bibleSearch.value || "").trim();
     // If user types something that looks like a reference, we still keep browsing experience.
     // Books list filters live as you type.
-    bibleRenderBooks(q);
+    renderBibleBooks(q);
   });
 
   els.bibleSearch.addEventListener("keydown", (e) => {
