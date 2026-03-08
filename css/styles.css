@@ -281,6 +281,7 @@ body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,
 .xpBar{margin-top:8px;height:10px;border-radius:999px;background:rgba(0,0,0,.08);overflow:hidden}
 .xpBarFill{height:100%;width:0%;background:linear-gradient(135deg,#a78bfa,#38bdf8);transition:width .35s ease}
 .floatingXp{position:fixed;z-index:9999;padding:8px 12px;border-radius:999px;background:linear-gradient(135deg,#a78bfa,#38bdf8);color:#fff;font-weight:900;box-shadow:0 18px 40px rgba(0,0,0,.18);pointer-events:none;animation:floatXP .9s ease forwards}
+.floatingXp--neg{background:linear-gradient(135deg,#ef4444,#f97316)}
 @keyframes floatXP{0%{transform:translateY(0) scale(.95);opacity:0}15%{opacity:1}100%{transform:translateY(-28px) scale(1);opacity:0}}
 .pill.wrong{background:rgba(239,68,68,.18)!important;border-color:rgba(239,68,68,.45)!important}
 

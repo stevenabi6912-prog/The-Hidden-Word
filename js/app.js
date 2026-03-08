@@ -391,10 +391,11 @@ function renderXPUI(xp) {
 }
 
 function floatXP(amount, anchorEl) {
-  if (!amount || amount <= 0) return;
+  if (!amount) return;
   const el = document.createElement("div");
   el.className = "floatingXp";
-  el.textContent = `+${amount} XP`;
+  if (amount < 0) el.classList.add("floatingXp--neg");
+  el.textContent = amount > 0 ? `+${amount} XP` : `${amount} XP`;
   document.body.appendChild(el);
   let x = window.innerWidth / 2;
   let y = 120;
@@ -860,6 +861,7 @@ function renderGame() {
     btn.addEventListener("click", () => {
       if (state.locked) return;
       state.locked = true;
+      const usedHint = !!state.hint;  // capture before clearing
       state.hint = null;
 
       const w = btn.getAttribute("data-word") || "";
@@ -869,15 +871,21 @@ function renderGame() {
       if (ok) {
         state.revealed.add(correctIdx);
         if (activeKid) {
-          activeKid.xp = Math.max(0, Number(activeKid.xp || 0)) + 2;
+          const xpGain = usedHint ? 0 : 2;
+          activeKid.xp = Math.max(0, Number(activeKid.xp || 0)) + xpGain;
           renderStats();
-          floatXP(2, btn);
+          floatXP(xpGain, btn);
         }
         setTimeout(() => {
           state.locked = false;
           renderGame();
         }, 430);
       } else {
+        if (activeKid) {
+          activeKid.xp = Math.max(0, Number(activeKid.xp || 0) - 2);
+          renderStats();
+          floatXP(-2, btn);
+        }
         setTimeout(() => {
           btn.classList.remove("wrong");
           state.locked = false;
@@ -1077,15 +1085,18 @@ function handleSpeechResult(transcript) {
       onVerseComplete().finally(() => celebrateAndGoHome());
     } else if (pct >= 60) {
       els.speakStatus.textContent = `${pct}% match — good effort! Accept or try again.`;
+      els.speakAccept.hidden = false;
       els.speakBtns.hidden = false;
     } else {
       els.speakStatus.textContent = `${pct}% match — keep practising! Tap mic to try again.`;
+      els.speakAccept.hidden = false;
       els.speakBtns.hidden = false;
     }
     return;
   }
 
-  // Step-by-step: match against only the current step's missing words
+  // Step-by-step: match against only the current step's missing words.
+  // The user may speak the full verse — LCS finds the missing words within it.
   const remaining = currentHiddenSlice().filter(i => !state.revealed.has(i));
   const expectedText = remaining.map(i => state.tokens[i]).filter(t => isWordToken(t)).join(" ");
   if (!expectedText) return;
@@ -1093,7 +1104,7 @@ function handleSpeechResult(transcript) {
   const { pct, html } = speechDiff(transcript, expectedText);
   els.speakResult.innerHTML = html;
 
-  if (pct >= 80) {
+  if (pct === 100) {
     els.speakBtns.hidden = true;
     for (const idx of remaining) state.revealed.add(idx);
     if (activeKid) {
@@ -1101,11 +1112,14 @@ function handleSpeechResult(transcript) {
       renderStats();
     }
     setTimeout(() => { if (speechMode) renderGame(); }, 500);
-  } else if (pct >= 50) {
-    els.speakStatus.textContent = `${pct}% — close! Accept or tap mic to try again.`;
-    els.speakBtns.hidden = false;
   } else {
-    els.speakStatus.textContent = `${pct}% — tap mic and try again.`;
+    if (activeKid) {
+      activeKid.xp = Math.max(0, Number(activeKid.xp || 0) - 2);
+      renderStats();
+      floatXP(-2, els.speakMicBtn);
+    }
+    els.speakStatus.textContent = `${pct}% — say every missing word and tap mic to try again.`;
+    els.speakAccept.hidden = true;   // no partial credit; all words required
     els.speakBtns.hidden = false;
   }
 }
