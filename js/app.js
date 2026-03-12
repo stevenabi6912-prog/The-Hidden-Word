@@ -840,11 +840,15 @@ function buildPills() {
 
   const wordTokens = state.tokens.filter(isWordToken);
   const choices = new Set([correctWord]);
+  const seenLower = new Set([correctWord.toLowerCase()]);
   let guard = 0;
   while (choices.size < Math.min(5, wordTokens.length) && guard < 200) {
     guard++;
     const w = wordTokens[Math.floor(Math.random() * wordTokens.length)];
-    choices.add(w);
+    if (!seenLower.has(w.toLowerCase())) {
+      choices.add(w);
+      seenLower.add(w.toLowerCase());
+    }
   }
   const arr = Array.from(choices);
   for (let i = arr.length - 1; i > 0; i--) {
