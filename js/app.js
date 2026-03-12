@@ -381,6 +381,7 @@ function goToSignup() {
   showAuthSection("create");
   setActiveNav(els.navProfile);
   showView("profile");
+  els.viewProfile.classList.add("signupOnly");
   renderProfile();
   renderKidsRow();
   renderStats();
@@ -1703,6 +1704,7 @@ function renderProfile() {
     els.authCard.style.display = "";
     return;
   }
+  els.viewProfile.classList.remove("signupOnly");
   els.profileName.textContent = parentDoc?.displayName || user.displayName || user.email || "Parent";
   els.profileMeta.textContent = user.email ? `Email: ${user.email}` : `UID: ${user.uid.slice(0,8)}…`;
   els.btnSignOut.disabled = false;

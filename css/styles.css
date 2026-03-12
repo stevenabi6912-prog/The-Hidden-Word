@@ -146,6 +146,8 @@ body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,
 .badgeLock{position:absolute;top:8px;right:10px;font-size:11px;opacity:.6}
 .profileGrid{display:grid;grid-template-columns:1fr 1.2fr;gap:14px;margin-top:12px}
 @media (max-width:860px){.profileGrid{grid-template-columns:1fr}}
+#viewProfile.signupOnly .viewHeader,#viewProfile.signupOnly .profileCard,#viewProfile.signupOnly .kidsBox,#viewProfile.signupOnly .badgeBox{display:none}
+#viewProfile.signupOnly .profileGrid{grid-template-columns:1fr;max-width:480px;margin:0 auto}
 .profileCard,.authCard{border:1px solid rgba(0,0,0,.08);background:#ffffffcc;border-radius:18px;padding:12px}
 .profileLabel{font-size:12px;color:rgba(13,19,33,.65);font-weight:900}
 .profileName{font-size:18px;font-weight:900;margin-top:6px}
