@@ -148,37 +148,46 @@
         </div>
 
         <div class="authCard" id="authCard">
-          <div class="authTitle">Sign in (Parent)</div>
-          <div class="authRow">
-            <label class="authLabel">Email</label>
-            <input class="searchInput" id="authEmail" placeholder="parent@email.com" />
-          </div>
-          <div class="authRow">
-            <label class="authLabel">Password</label>
-            <input class="searchInput" id="authPass" type="password" placeholder="••••••••" />
-          </div>
-          <div class="profileButtons">
-            <button class="primary" id="btnSignIn" type="button">Sign in</button>
-            <button class="soft" id="btnForgotPassword" type="button" title="Send a reset email">Forgot password</button>
+
+          <!-- Sign in section -->
+          <div id="authLoginSection">
+            <div class="authTitle">Sign in</div>
+            <div class="authRow">
+              <label class="authLabel">Email</label>
+              <input class="searchInput" id="authEmail" placeholder="parent@email.com" />
+            </div>
+            <div class="authRow">
+              <label class="authLabel">Password</label>
+              <input class="searchInput" id="authPass" type="password" placeholder="••••••••" />
+            </div>
+            <div class="profileButtons">
+              <button class="primary" id="btnSignIn" type="button">Sign in</button>
+              <button class="soft" id="btnForgotPassword" type="button">Forgot password</button>
+            </div>
+            <div class="authSwitchRow">Don't have an account? <button class="linkBtn" id="btnSwitchToSignUp" type="button">Create one</button></div>
           </div>
 
-          <div class="authDivider"></div>
+          <div class="authDivider" id="authSectionDivider"></div>
 
-          <div class="authTitle">Create parent account</div>
-          <div class="authRow">
-            <label class="authLabel">Parent display name</label>
-            <input class="searchInput" id="authName" placeholder="e.g., Steven" />
-          </div>
-          <div class="authRow">
-            <label class="authLabel">Email</label>
-            <input class="searchInput" id="authEmail2" placeholder="parent@email.com" />
-          </div>
-          <div class="authRow">
-            <label class="authLabel">Password</label>
-            <input class="searchInput" id="authPass2" type="password" placeholder="••••••••" />
-          </div>
-          <div class="profileButtons">
-            <button class="soft" id="btnSignUp" type="button">Create account</button>
+          <!-- Create account section -->
+          <div id="authCreateSection">
+            <div class="authTitle">Create account</div>
+            <div class="authRow">
+              <label class="authLabel">Your name</label>
+              <input class="searchInput" id="authName" placeholder="e.g., Steven" />
+            </div>
+            <div class="authRow">
+              <label class="authLabel">Email</label>
+              <input class="searchInput" id="authEmail2" placeholder="parent@email.com" />
+            </div>
+            <div class="authRow">
+              <label class="authLabel">Password</label>
+              <input class="searchInput" id="authPass2" type="password" placeholder="••••••••" />
+            </div>
+            <div class="profileButtons">
+              <button class="primary" id="btnSignUp" type="button">Create account</button>
+            </div>
+            <div class="authSwitchRow">Already have an account? <button class="linkBtn" id="btnSwitchToSignIn" type="button">Sign in</button></div>
           </div>
 
           <div class="muted small" id="authMsg"></div>
@@ -304,6 +313,20 @@
       </div>
     </section>
   </main>
+
+  <!-- Welcome modal shown on first visit (not signed in) -->
+  <div class="modalOverlay" id="welcomeModal" hidden>
+    <div class="modalCard welcomeCard">
+      <div class="welcomeLogo">✦</div>
+      <div class="modalTitle welcomeTitle">The Hidden Word</div>
+      <div class="modalText welcomeText">Hide God's Word in your heart · KJV · one verse a day</div>
+      <div class="welcomeBtns">
+        <button class="btn primary welcomeBtn" id="welcomeLogin" type="button">Log In</button>
+        <button class="btn primary welcomeBtn" id="welcomeSignup" type="button">Create Account</button>
+        <button class="btn soft welcomeBtn" id="welcomeGuest" type="button">Play as Guest</button>
+      </div>
+    </div>
+  </div>
 
   <div class="modalOverlay" id="guestModal" hidden>
     <div class="modalCard">

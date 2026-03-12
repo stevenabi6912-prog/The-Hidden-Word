@@ -119,6 +119,17 @@ const els = {
   authMsg: document.getElementById("authMsg"),
   firebaseStatus: document.getElementById("firebaseStatus"),
 
+  authLoginSection: document.getElementById("authLoginSection"),
+  authCreateSection: document.getElementById("authCreateSection"),
+  authSectionDivider: document.getElementById("authSectionDivider"),
+  btnSwitchToSignUp: document.getElementById("btnSwitchToSignUp"),
+  btnSwitchToSignIn: document.getElementById("btnSwitchToSignIn"),
+
+  welcomeModal: document.getElementById("welcomeModal"),
+  welcomeLogin: document.getElementById("welcomeLogin"),
+  welcomeSignup: document.getElementById("welcomeSignup"),
+  welcomeGuest: document.getElementById("welcomeGuest"),
+
   guestModal: document.getElementById("guestModal"),
   guestGoProfile: document.getElementById("guestGoProfile"),
   guestContinue: document.getElementById("guestContinue"),
@@ -332,6 +343,56 @@ function requireLoginOrGuest(action){
   if (auth?.currentUser) { action(); return; }
   if (guestAllowed) { action(); return; }
   showGuestModal(action);
+}
+
+// Welcome modal (shown on first load when not signed in)
+function showWelcomeModal() {
+  if (!els.welcomeModal) return;
+  els.welcomeModal.hidden = false;
+  els.welcomeModal.style.display = "flex";
+}
+function hideWelcomeModal() {
+  if (!els.welcomeModal) return;
+  els.welcomeModal.hidden = true;
+  els.welcomeModal.style.display = "none";
+}
+
+// Show only one section of the authCard at a time
+function showAuthSection(section) {
+  const showLogin = section === "login";
+  if (els.authLoginSection) els.authLoginSection.hidden = !showLogin;
+  if (els.authCreateSection) els.authCreateSection.hidden = showLogin;
+  if (els.authSectionDivider) els.authSectionDivider.hidden = false;
+}
+
+function goToLogin() {
+  hideWelcomeModal();
+  showAuthSection("login");
+  setActiveNav(els.navProfile);
+  showView("profile");
+  renderProfile();
+  renderKidsRow();
+  renderStats();
+  setTimeout(() => els.authEmail?.focus(), 80);
+}
+
+function goToSignup() {
+  hideWelcomeModal();
+  showAuthSection("create");
+  setActiveNav(els.navProfile);
+  showView("profile");
+  renderProfile();
+  renderKidsRow();
+  renderStats();
+  setTimeout(() => els.authName?.focus(), 80);
+}
+
+function goAsGuest() {
+  hideWelcomeModal();
+  guestAllowed = true;
+  setActiveNav(els.navHome);
+  showView("home");
+  renderStats();
 }
 function showView(name) {
   els.viewHome.hidden = name !== "home";
@@ -1685,11 +1746,12 @@ async function doSignIn() {
     // Pull parent/kid data now, and surface any failures visibly.
     await loadParentAndKids();
 
+    hideWelcomeModal();
     renderProfile();
     renderKidsRow();
     renderStats();
-    setActiveNav(els.navProfile);
-    showView("profile");
+    setActiveNav(els.navHome);
+    showView("home");
   } catch (err) {
     console.error("Sign in failed:", err);
     const msg = friendlyAuthError(err) || safeErrorMessage(err);
@@ -1795,6 +1857,9 @@ async function doSignUp() {
     kids = await listKids();
     await setActiveKidById(firstKid);
     els.authMsg.textContent = "";
+    hideWelcomeModal();
+    setActiveNav(els.navHome);
+    showView("home");
   } catch (e) {
     const msg = friendlyAuthError(e);
     els.authMsg.textContent = msg;
@@ -1907,6 +1972,15 @@ function wire() {
   els.btnResetStep.addEventListener("click", resetStep);
   els.btnStartOver.addEventListener("click", startOver);
 
+  // Welcome modal
+  els.welcomeLogin?.addEventListener("click", goToLogin);
+  els.welcomeSignup?.addEventListener("click", goToSignup);
+  els.welcomeGuest?.addEventListener("click", goAsGuest);
+
+  // Auth section switch links
+  els.btnSwitchToSignUp?.addEventListener("click", () => showAuthSection("create"));
+  els.btnSwitchToSignIn?.addEventListener("click", () => showAuthSection("login"));
+
   els.btnSignIn.addEventListener("click", doSignIn);
   if (els.btnForgotPassword) els.btnForgotPassword.addEventListener("click", doForgotPassword);
 
@@ -1937,12 +2011,11 @@ async function boot() {
 
   await initFirebase();
 
-  // Start on Profile (login) unless the user is already signed in.
-  // (Guest choice is made when starting a verse, not at page-load.)
   if (!auth?.currentUser) {
-    setActiveNav(els.navProfile);
-    showView("profile");
-    renderProfile();
+    // Show home page behind the welcome modal
+    setActiveNav(els.navHome);
+    showView("home");
+    showWelcomeModal();
   } else {
     setActiveNav(els.navHome);
     showView("home");
