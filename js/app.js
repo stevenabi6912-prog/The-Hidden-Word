@@ -504,11 +504,21 @@ function renderBadgesPage() {
   }).join("");
 }
 
+function effectiveStreak(kid) {
+  if (!kid || !kid.streak || !kid.lastCompleted) return 0;
+  const today = todayISO();
+  const d = new Date(today + "T00:00:00");
+  d.setDate(d.getDate() - 1);
+  const yesterday = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  return (kid.lastCompleted === today || kid.lastCompleted === yesterday) ? kid.streak : 0;
+}
+
 function renderStats() {
-  const streak = activeKid?.streak ?? 0;
+  const streak = effectiveStreak(activeKid);
   const xp = activeKid?.xp ?? 0;
-  els.streakHome.textContent = String(streak);
-  els.streakGame.textContent = String(streak);
+  const streakLabel = streak === 1 ? "1 day" : `${streak} days`;
+  els.streakHome.textContent = streakLabel;
+  els.streakGame.textContent = streakLabel;
   els.xpHome.textContent = String(xp);
   els.xpGame.textContent = String(xp);
   els.completedHome.textContent = String(completedCache.length);

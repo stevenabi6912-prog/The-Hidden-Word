@@ -51,13 +51,12 @@
       <div class="homeGrid">
         <div>
           <h1 class="h1">The Hidden Word</h1>
-          <p class="muted">Pick today's verse, or choose any verse to practice. No competition — just steady growth.</p>
           <p class="muted" style="margin-top:6px;">Playing as: <strong><span id="playingAsLabel">Profile</span></strong></p>
 
           <div class="statsRow">
             <div class="pillStat">
               <div class="pillLabel">Streak</div>
-              <div class="pillValue"><span id="streakHome">0</span> days</div>
+              <div class="pillValue"><span id="streakHome">0 days</span></div>
             </div>
             <div class="pillStat">
               <div class="pillLabel">Completed</div>
@@ -76,16 +75,14 @@
           <div class="bigBtns">
             <button class="bigCard bigCard--daily" id="homeDaily" type="button">
               <div class="bigTitle">Daily verse</div>
-              <div class="bigDesc">A new KJV verse every day. Builds your streak.</div>
             </button>
 
             <button class="bigCard bigCard--pick" id="homePick" type="button">
               <div class="bigTitle">Pick your own</div>
-              <div class="bigDesc">Browse any verse in the Bible to practice.</div>
             </button>
           </div>
 
-          <div class="hintLine">Tip: Use “Hint” when you're stuck — the goal is learning, not racing.</div>
+
 <div class="xpCard">
   <div class="xpLine"><span id="levelLabelHome">Level 1</span><span id="xpNextHome">0 / 100 XP</span></div>
   <div class="xpBar"><div class="xpBarFill" id="xpBarFillHome"></div></div>
@@ -111,7 +108,6 @@
       <div class="viewHeader">
         <div>
           <div class="viewTitle"><span class="titleAvatar" aria-hidden="true"></span>Family Profiles</div>
-          <div class="muted">One parent account — tap a child to switch. Progress stays separate.</div>
         </div>
       </div>
 
@@ -192,8 +188,6 @@
 
           <div class="muted small" id="authMsg"></div>
 
-          <div class="authDivider"></div>
-          <div class="muted small">Admin: paste Firebase config into <b>js/firebase-config.js</b>.</div>
           <div class="muted small" id="firebaseStatus"></div>
         </div>
       </div>
@@ -206,7 +200,6 @@
           <input class="searchInput" id="kidName" placeholder="Add a child name (e.g., Luke)" />
           <button class="primary" id="btnAddKid" type="button">Add</button>
         </div>
-        <div class="muted small">Each child has separate streak, XP, badges, and completed verses.</div>
       </div>
 
       <div class="badgeBox">
@@ -216,9 +209,6 @@
 </section>
 
     <section class="card" id="viewPick" hidden>
-  <h2>Pick your own</h2>
-  <p class="muted">Browse the Bible or type a reference (KJV).</p>
-
   <div id="pickBiblePane">
     <div class="pickSearchRow">
       <input id="bibleSearch" class="textInput" type="text" placeholder="Type a reference (e.g., John 3:16) or search a book" />
@@ -252,7 +242,6 @@
       <div class="viewHeader">
         <div>
           <div class="viewTitle">Badges</div>
-          <div class="muted">Earn badges by memorising verses and building streaks.</div>
         </div>
       </div>
       <div class="badgesPageGrid" id="badgesPageGrid"></div>
@@ -262,7 +251,6 @@
       <div class="viewHeader">
         <div>
           <div class="viewTitle">My Verses</div>
-          <div class="muted">Verses you’ve completed (saved on this device).</div>
         </div>
       </div>
       <div class="list" id="myList"></div>
@@ -276,7 +264,7 @@
         </div>
         <div class="streakPill">
           <div class="pillLabel">Streak</div>
-          <div class="pillValue"><span id="streakGame">0</span> days</div>
+          <div class="pillValue"><span id="streakGame">0 days</span></div>
         </div>
         <div class="streakPill">
           <div class="pillLabel">XP</div>
@@ -287,7 +275,7 @@
       <div class="verseBox" id="verseBox"></div>
 
       <div class="controls" id="tapControls">
-        <button class="primary" id="btnHint" type="button">Hint: next word</button>
+        <button class="primary" id="btnHint" type="button">Hint</button>
         <button class="soft" id="btnFullAttempt" type="button">I think I have it</button>
         <button class="soft" id="btnResetStep" type="button">Reset step</button>
         <button class="soft" id="btnStartOver" type="button">Start over</button>
@@ -309,7 +297,7 @@
           <button class="primary" id="speakAccept" type="button">Accept (close enough)</button>
           <button class="soft" id="speakRetry" type="button">Try again</button>
         </div>
-        <button class="soft speakExitBtn" id="btnSpeakExit" type="button">⌨️ Switch to Tapping mode</button>
+        <button class="soft speakExitBtn" id="btnSpeakExit" type="button">⌨️ Tap mode</button>
       </div>
     </section>
   </main>
@@ -332,7 +320,7 @@
     <div class="modalCard">
       <div class="modalTitle">Not signed in</div>
       <div class="modalText">
-        You're not signed in, so your streak, XP, and completed verses may be lost if you switch devices or clear browser data.
+        You're not signed in — progress won't sync across devices.
       </div>
       <div class="modalBtns">
         <button class="btn" id="guestGoProfile" type="button">Log in</button>
