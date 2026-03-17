@@ -802,6 +802,7 @@ function initState(verse, mode) {
     consecutiveHints: 0,
     fullAttempt: false,
     snap: null,
+    refQuiz: false,
   };
 }
 function currentHiddenSlice() {
@@ -888,6 +889,64 @@ function celebrateAndGoHome() {
     renderToday();
   }, 1200);
 }
+function renderRefQuiz() {
+  // Show full verse text, hide reference, offer 4 reference choices
+  els.verseBox.innerHTML = `<span class="verseText">${escapeHTML(state.verse.text)}</span>`;
+  els.stepLabel.textContent = "What's the reference?";
+  els.gameRef.textContent = "?";
+
+  // Build 4 choices: correct + 3 random distractors from library
+  const correct = state.verse.ref;
+  const distractors = [];
+  const pool = library.filter(v => v.ref !== correct);
+  const seen = new Set([correct]);
+  let guard = 0;
+  while (distractors.length < 3 && pool.length && guard < 300) {
+    guard++;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    if (!seen.has(pick.ref)) { seen.add(pick.ref); distractors.push(pick.ref); }
+  }
+  const choices = [correct, ...distractors].sort(() => Math.random() - 0.5);
+
+  els.wordRow.hidden = false;
+  els.pillRow.innerHTML = `
+    <div class="refQuizLabel">Tap the correct reference:</div>
+    ${choices.map(r => `<button class="pill refPill" type="button" data-ref="${escapeHTML(r)}">${escapeHTML(r)}</button>`).join("")}
+  `;
+
+  els.pillRow.querySelectorAll(".refPill").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (state.locked) return;
+      state.locked = true;
+      const chosen = btn.getAttribute("data-ref") || "";
+      const ok = chosen === correct;
+      btn.classList.add(ok ? "good" : "wrong");
+      if (ok) {
+        els.gameRef.textContent = correct;
+        if (activeKid) {
+          activeKid.xp = Math.max(0, Number(activeKid.xp || 0)) + 5;
+          renderStats();
+          floatXP(5, btn);
+        }
+        els.stepLabel.textContent = "Complete 🎉";
+        setTimeout(() => {
+          onVerseComplete().finally(() => celebrateAndGoHome());
+        }, 600);
+      } else {
+        if (activeKid) {
+          activeKid.xp = Math.max(0, Number(activeKid.xp || 0) - 2);
+          renderStats();
+          floatXP(-2, btn);
+        }
+        setTimeout(() => {
+          btn.classList.remove("wrong");
+          state.locked = false;
+        }, 650);
+      }
+    });
+  });
+}
+
 function renderGame() {
   if (!state) return;
 
@@ -897,9 +956,10 @@ function renderGame() {
   const expected = nextExpectedIndex();
   if (expected === null) {
     if (state.step >= state.hiddenIdx.length) {
-      els.pillRow.innerHTML = "";
-      els.stepLabel.textContent = "Complete 🎉";
-      onVerseComplete().finally(() => celebrateAndGoHome());
+      if (!state.refQuiz) {
+        state.refQuiz = true;
+        renderRefQuiz();
+      }
       return;
     }
     state.step += 1;

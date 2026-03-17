@@ -68,9 +68,10 @@ body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,
 .primary{background:linear-gradient(135deg,#a78bfa,#fb7185);color:white;border:none}
 .soft{background:#ffffffd9}
 .wordRow{margin-top:10px}
-.pills{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
-.pill{border:1px solid var(--stroke);background:#ffffffd9;border-radius:999px;padding:10px 14px;font-weight:900;cursor:pointer;transition:transform .08s ease,background .15s ease;}
-.pill:active{transform:translateY(1px)}
+.pills{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}
+.pill{border:1px solid var(--stroke);background:#ffffffd9;border-radius:999px;padding:13px 22px;font-weight:900;font-size:15px;cursor:pointer;transition:transform .08s ease,background .15s ease,box-shadow .15s ease;box-shadow:0 4px 14px rgba(0,0,0,.08);}
+.pill:hover{box-shadow:0 8px 22px rgba(124,58,237,.16);border-color:rgba(124,58,237,.25);background:#fff}
+.pill:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(0,0,0,.07)}
 .pill.good{background:rgba(34,197,94,.18);border-color:rgba(34,197,94,.35)}
 .pill.bad{background:rgba(239,68,68,.18);border-color:rgba(239,68,68,.35)}
 
@@ -228,6 +229,10 @@ body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,
 /* Disabled hint button */
 #btnHint:disabled{opacity:.4;cursor:not-allowed}
 
+/* Reference quiz */
+.refQuizLabel{width:100%;font-size:13px;font-weight:900;color:var(--muted);margin-bottom:4px}
+.refPill{font-size:14px !important;padding:11px 18px !important;letter-spacing:.01em}
+
 /* ── Welcome modal ───────────────────────────────────────────────── */
 .welcomeCard{text-align:center;max-width:360px;padding:36px 28px}
 .welcomeLogo{width:60px;height:60px;border-radius:20px;background:linear-gradient(135deg,#7c3aed,#22c1c3);display:grid;place-items:center;color:white;font-size:26px;font-weight:900;margin:0 auto 16px;box-shadow:0 14px 34px rgba(0,0,0,.18)}
@@ -276,6 +281,14 @@ body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,
 .bibleVerseLine{padding:8px 10px;border-radius:12px;border:1px solid rgba(13,19,33,.08);background:rgba(255,255,255,.85);margin:8px 0;cursor:pointer}
 .bibleVerseLine:hover{box-shadow:0 12px 30px rgba(13,19,33,.10)}
 .bibleVerseRef{font-weight:700;margin-right:6px}
+
+/* --- Verse picker buttons --- */
+.verseBtn{display:flex;align-items:baseline;gap:10px;width:100%;text-align:left;border:1px solid rgba(13,19,33,.09);background:rgba(255,255,255,.88);border-radius:14px;padding:12px 14px;margin:6px 0;cursor:pointer;transition:box-shadow .13s ease,background .13s ease,transform .08s ease;font-size:14px;line-height:1.5}
+.verseBtn:hover{background:rgba(255,255,255,1);box-shadow:0 8px 24px rgba(124,58,237,.12);border-color:rgba(124,58,237,.2)}
+.verseBtn:active{transform:translateY(1px)}
+.verseBtn.active{background:rgba(233,213,255,.45);border-color:rgba(124,58,237,.35);box-shadow:0 6px 18px rgba(124,58,237,.15)}
+.vn{flex-shrink:0;font-weight:900;font-size:13px;color:#7c3aed;background:rgba(124,58,237,.1);border-radius:8px;padding:2px 8px;line-height:1.6}
+.vt{color:rgba(13,19,33,.82);line-height:1.55}
 
 /* --- Pick (Bible Browser) --- */
 .pickSearchRow{display:flex;gap:12px;align-items:center;margin:12px 0 16px}
