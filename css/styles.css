@@ -221,6 +221,13 @@ body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,
 /* Ensure [hidden] works for modal overlays */
 .modalOverlay[hidden],.speakPanel[hidden],.speakBtns[hidden]{display:none !important;}
 
+/* Verse modal */
+.verseModalCard{max-width:600px}
+.verseModalText{font-size:16px;line-height:1.65;color:rgba(13,19,33,.9);white-space:pre-wrap;max-height:60vh;overflow-y:auto}
+
+/* Disabled hint button */
+#btnHint:disabled{opacity:.4;cursor:not-allowed}
+
 /* ── Welcome modal ───────────────────────────────────────────────── */
 .welcomeCard{text-align:center;max-width:360px;padding:36px 28px}
 .welcomeLogo{width:60px;height:60px;border-radius:20px;background:linear-gradient(135deg,#7c3aed,#22c1c3);display:grid;place-items:center;color:white;font-size:26px;font-weight:900;margin:0 auto 16px;box-shadow:0 14px 34px rgba(0,0,0,.18)}

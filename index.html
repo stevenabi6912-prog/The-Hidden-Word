@@ -279,6 +279,7 @@
         <button class="soft" id="btnFullAttempt" type="button">I think I have it</button>
         <button class="soft" id="btnResetStep" type="button">Reset step</button>
         <button class="soft" id="btnStartOver" type="button">Start over</button>
+        <button class="soft" id="btnShowVerse" type="button">Show Verse</button>
         <button class="soft" id="btnSpeakToggle" type="button">🎤 Speak it</button>
       </div>
 
@@ -325,6 +326,16 @@
       <div class="modalBtns">
         <button class="btn" id="guestGoProfile" type="button">Log in</button>
         <button class="btn primary" id="guestContinue" type="button">Continue without logging in</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modalOverlay" id="verseModal" hidden>
+    <div class="modalCard verseModalCard">
+      <div class="modalTitle" id="verseModalRef">—</div>
+      <div class="modalText verseModalText" id="verseModalText"></div>
+      <div class="modalBtns">
+        <button class="btn primary" id="verseModalReady" type="button">I'm Ready</button>
       </div>
     </div>
   </div>

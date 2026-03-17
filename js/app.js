@@ -82,6 +82,11 @@ const els = {
   tapControls: document.getElementById("tapControls"),
   wordRow: document.getElementById("wordRow"),
   btnSpeakToggle: document.getElementById("btnSpeakToggle"),
+  btnShowVerse: document.getElementById("btnShowVerse"),
+  verseModal: document.getElementById("verseModal"),
+  verseModalRef: document.getElementById("verseModalRef"),
+  verseModalText: document.getElementById("verseModalText"),
+  verseModalReady: document.getElementById("verseModalReady"),
   speakPanel: document.getElementById("speakPanel"),
   speakStatus: document.getElementById("speakStatus"),
   speakMicBtn: document.getElementById("speakMicBtn"),
@@ -794,6 +799,7 @@ function initState(verse, mode) {
     revealed: new Set(),
     locked: false,
     hint: null,
+    consecutiveHints: 0,
     fullAttempt: false,
     snap: null,
   };
@@ -899,6 +905,7 @@ function renderGame() {
     state.step += 1;
     state.revealed.clear();
     state.hint = null;
+    state.consecutiveHints = 0;
     state.fullAttempt = false;
     state.snap = null;
     if (activeKid) {
@@ -928,6 +935,9 @@ function renderGame() {
   if (!built) return;
   const { correctWord, correctIdx, pills } = built;
 
+  // Disable hint button when 2 consecutive hints have been used
+  if (els.btnHint) els.btnHint.disabled = state.consecutiveHints >= 2;
+
   els.pillRow.innerHTML = pills.map(w => {
     const hinted = state.hint && w === state.hint;
     return `<button class="pill${hinted ? " hint" : ""}" type="button" data-word="${escapeHTML(w)}">${escapeHTML(w)}</button>`;
@@ -946,6 +956,7 @@ function renderGame() {
 
       if (ok) {
         state.revealed.add(correctIdx);
+        state.consecutiveHints = 0;
         if (activeKid) {
           const xpGain = usedHint ? 0 : 2;
           activeKid.xp = Math.max(0, Number(activeKid.xp || 0)) + xpGain;
@@ -980,9 +991,16 @@ function renderGame() {
 }
 function hintNext() {
   if (!state) return;
+  if (state.consecutiveHints >= 2) return;
   const idx = nextExpectedIndex();
   if (idx === null) return;
   state.hint = state.tokens[idx];
+  state.consecutiveHints++;
+  if (activeKid) {
+    activeKid.xp = Math.max(0, Number(activeKid.xp || 0) - 1);
+    renderStats();
+    floatXP(-1, els.btnHint);
+  }
   renderGame();
 }
 function startFullAttempt() {
@@ -1000,6 +1018,7 @@ function resetStep() {
   const slice = currentHiddenSlice();
   for (const idx of slice) state.revealed.delete(idx);
   state.hint = null;
+  state.consecutiveHints = 0;
   renderGame();
 }
 function startOver() {
@@ -1007,6 +1026,7 @@ function startOver() {
   state.step = 1;
   state.revealed.clear();
   state.hint = null;
+  state.consecutiveHints = 0;
   state.fullAttempt = false;
   state.snap = null;
   renderGame();
@@ -1063,6 +1083,7 @@ function enterSpeechMode() {
   els.speakBtns.hidden = true;
   els.speakResult.innerHTML = "";
   els.speakStatus.textContent = "Tap the microphone and say the missing word(s).";
+  if (els.btnSpeakToggle) els.btnSpeakToggle.textContent = "⌨️ Tap it";
   stopListening();
 }
 
@@ -1071,6 +1092,8 @@ function exitSpeechMode() {
   stopListening();
   els.wordRow.hidden = false;
   els.speakPanel.hidden = true;
+  if (els.btnSpeakToggle) els.btnSpeakToggle.textContent = "🎤 Speak it";
+  renderGame();
 }
 
 function stopListening() {
@@ -1202,6 +1225,10 @@ function handleSpeechResult(transcript) {
 
 /* ── Speech event listeners ───────────────────────────────────────── */
 els.btnSpeakToggle?.addEventListener("click", () => {
+  if (speechMode) {
+    exitSpeechMode();
+    return;
+  }
   if (!isSpeechSupported()) {
     showAlert("Not supported", "Speech recognition is not supported in this browser. Try Chrome on desktop or Android.");
     return;
@@ -1241,6 +1268,31 @@ els.speakRetry?.addEventListener("click", () => {
 
 /* ── End speech mode ─────────────────────────────────────────────── */
 
+/* ── Verse modal ─────────────────────────────────────────────────── */
+let verseModalCallback = null;
+
+function showVerseModal(verse, onReady) {
+  els.verseModalRef.textContent = verse.ref;
+  els.verseModalText.textContent = verse.text;
+  verseModalCallback = onReady || null;
+  els.verseModal.hidden = false;
+}
+
+els.verseModalReady?.addEventListener("click", () => {
+  els.verseModal.hidden = true;
+  if (verseModalCallback) {
+    const cb = verseModalCallback;
+    verseModalCallback = null;
+    cb();
+  }
+});
+
+els.btnShowVerse?.addEventListener("click", () => {
+  if (!state) return;
+  showVerseModal(state.verse, null);
+});
+/* ── End verse modal ──────────────────────────────────────────────── */
+
 function startGameInternal(verse, mode) {
   state = initState(verse, mode);
   // Reset speech mode on every new game
@@ -1249,13 +1301,16 @@ function startGameInternal(verse, mode) {
   els.tapControls.hidden = false;
   els.wordRow.hidden = false;
   els.speakPanel.hidden = true;
+  if (els.btnSpeakToggle) els.btnSpeakToggle.textContent = "🎤 Speak it";
 
   els.gameRef.textContent = verse.ref;
   els.gameMode.textContent = `Today: ${todayISO()}`;
   setActiveNav(mode === "daily" ? els.navDaily : els.navPick);
   showView("game");
   renderStats();
-  renderGame();
+
+  // Show full verse first so user can read it before blanks appear
+  showVerseModal(verse, () => renderGame());
 }
 
 // Only warn about guest mode when a verse is about to start.
