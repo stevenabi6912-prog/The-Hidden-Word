@@ -850,16 +850,41 @@ function buildPills() {
   const correctIdx = nextExpectedIndex();
   const correctWord = state.tokens[correctIdx];
 
-  const wordTokens = state.tokens.filter(isWordToken);
+  const isNumeric = /^\d+$/.test(correctWord);
   const choices = new Set([correctWord]);
   const seenLower = new Set([correctWord.toLowerCase()]);
   let guard = 0;
-  while (choices.size < Math.min(5, wordTokens.length) && guard < 200) {
-    guard++;
-    const w = wordTokens[Math.floor(Math.random() * wordTokens.length)];
-    if (!seenLower.has(w.toLowerCase())) {
-      choices.add(w);
-      seenLower.add(w.toLowerCase());
+
+  if (isNumeric) {
+    // Generate plausible numeric distractors (chapter/verse range 1–176)
+    const correct = parseInt(correctWord, 10);
+    const candidates = [];
+    for (let n = Math.max(1, correct - 10); n <= correct + 10; n++) {
+      if (n !== correct) candidates.push(String(n));
+    }
+    // Shuffle candidates then fill remaining slots with randoms in 1–176
+    for (let i = candidates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+    for (const c of candidates) {
+      if (choices.size >= 5) break;
+      choices.add(c); seenLower.add(c);
+    }
+    while (choices.size < 5 && guard < 200) {
+      guard++;
+      const n = String(1 + Math.floor(Math.random() * 176));
+      if (!seenLower.has(n)) { choices.add(n); seenLower.add(n); }
+    }
+  } else {
+    const wordTokens = state.tokens.filter(t => isWordToken(t) && !/^\d+$/.test(t));
+    while (choices.size < Math.min(5, wordTokens.length) && guard < 200) {
+      guard++;
+      const w = wordTokens[Math.floor(Math.random() * wordTokens.length)];
+      if (!seenLower.has(w.toLowerCase())) {
+        choices.add(w);
+        seenLower.add(w.toLowerCase());
+      }
     }
   }
   const arr = Array.from(choices);
@@ -1747,6 +1772,40 @@ async function saveCompletedToCloud(verse, atISO) {
   }, { merge: true });
 }
 
+function showBadgePopups(badges) {
+  if (!badges.length) return;
+  const badge = badges[0];
+  const rest = badges.slice(1);
+
+  const overlay = document.createElement("div");
+  overlay.className = "badgePopupOverlay";
+  overlay.innerHTML = `
+    <div class="badgePopupCard">
+      <div class="badgePopupSparkles" aria-hidden="true">
+        <span class="bps bps1">✨</span><span class="bps bps2">⭐</span>
+        <span class="bps bps3">✨</span><span class="bps bps4">🌟</span>
+        <span class="bps bps5">✨</span><span class="bps bps6">⭐</span>
+      </div>
+      <div class="badgePopupUnlocked">🎉 Badge Unlocked!</div>
+      <div class="badgePopupIcon">${badge.icon}</div>
+      <div class="badgePopupName">${escapeHTML(badge.label)}</div>
+      <div class="badgePopupDesc">${escapeHTML(badge.desc)}</div>
+      <button class="badgePopupBtn" type="button">Awesome!</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add("badgePopupOverlay--in"));
+
+  overlay.querySelector(".badgePopupBtn").addEventListener("click", () => {
+    overlay.classList.remove("badgePopupOverlay--in");
+    overlay.classList.add("badgePopupOverlay--out");
+    overlay.addEventListener("animationend", () => {
+      overlay.remove();
+      if (rest.length) setTimeout(() => showBadgePopups(rest), 200);
+    }, { once: true });
+  });
+}
+
 async function onVerseComplete() {
   if (!state) return;
   const key = getVerseKey(state.verse);
@@ -1764,9 +1823,14 @@ async function onVerseComplete() {
   const bonusXP = already ? 10 : 50;
 
   activeKid.xp = (activeKid.xp || 0) + bonusXP;
+  const badgesBefore = new Set(Object.keys(activeKid.badges || {}));
   awardBadgesForKid(activeKid);
+  const newBadges = BADGES.filter(b => activeKid.badges[b.id] && !badgesBefore.has(b.id));
   renderStats();
   floatXP(bonusXP, els.gameRef);
+  if (newBadges.length) {
+    setTimeout(() => showBadgePopups(newBadges), 1400);
+  }
 
   await saveCompletedToCloud(state.verse, atISO);
   await saveActiveKidDoc();
