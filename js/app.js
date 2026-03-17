@@ -560,9 +560,14 @@ function renderBibleBooks(filter = "") {
   }
   els.bibleBooks.innerHTML = books.map(b => {
     const active = bibleState.selectedBook === b.bookid;
-    return `<button class="bibleBtn ${active ? "active" : ""}" type="button" data-book="${escapeHTML(b.bookid)}">${escapeHTML(b.name)}</button>`;
+    const isNT = NT_BOOKS.has(b.name);
+    return `<button class="bibleBookBtn ${active ? "active" : ""}" type="button" data-book="${escapeHTML(b.bookid)}">
+      <span class="bookBtnBadge ${isNT ? "nt" : "ot"}">${isNT ? "NT" : "OT"}</span>
+      <span class="bookBtnName">${escapeHTML(b.name)}</span>
+      ${active ? `<span class="bookBtnChev">›</span>` : ""}
+    </button>`;
   }).join("");
-  els.bibleBooks.querySelectorAll(".bibleBtn").forEach(btn => {
+  els.bibleBooks.querySelectorAll(".bibleBookBtn").forEach(btn => {
     btn.addEventListener("click", async () => {
       const bookid = btn.getAttribute("data-book");
       bibleState.selectedBook = bookid;
@@ -584,9 +589,9 @@ async function renderBibleChapters(bookid) {
     }
     els.bibleChapters.innerHTML = list.map(ch => {
       const active = bibleState.selectedChapter === ch;
-      return `<button class="bibleBtn ${active ? "active" : ""}" type="button" data-ch="${ch}">${ch}</button>`;
+      return `<button class="bibleChBtn ${active ? "active" : ""}" type="button" data-ch="${ch}">${ch}</button>`;
     }).join("");
-    els.bibleChapters.querySelectorAll(".bibleBtn").forEach(btn => {
+    els.bibleChapters.querySelectorAll(".bibleChBtn").forEach(btn => {
       btn.addEventListener("click", async () => {
         const ch = Number(btn.getAttribute("data-ch"));
         bibleState.selectedChapter = ch;
@@ -775,7 +780,8 @@ function renderMyVerses() {
 
 /* GAME LOGIC (unchanged from v5) */
 function initState(verse, mode) {
-  const tokens = normalizeTokens(verse.text);
+  // Append the reference so its words ("John", "3", "16") enter the blank pool
+  const tokens = normalizeTokens(verse.text + " \u2014 " + verse.ref);
   const wordIdx = tokens.map((t,i) => (isWordToken(t) ? i : -1)).filter(i => i >= 0);
 
   const seedStr = verse.ref + "|" + verse.text.length;
@@ -802,7 +808,6 @@ function initState(verse, mode) {
     consecutiveHints: 0,
     fullAttempt: false,
     snap: null,
-    refQuiz: false,
   };
 }
 function currentHiddenSlice() {
@@ -889,63 +894,6 @@ function celebrateAndGoHome() {
     renderToday();
   }, 1200);
 }
-function renderRefQuiz() {
-  // Show full verse text, hide reference, offer 4 reference choices
-  els.verseBox.innerHTML = `<span class="verseText">${escapeHTML(state.verse.text)}</span>`;
-  els.stepLabel.textContent = "What's the reference?";
-  els.gameRef.textContent = "?";
-
-  // Build 4 choices: correct + 3 random distractors from library
-  const correct = state.verse.ref;
-  const distractors = [];
-  const pool = library.filter(v => v.ref !== correct);
-  const seen = new Set([correct]);
-  let guard = 0;
-  while (distractors.length < 3 && pool.length && guard < 300) {
-    guard++;
-    const pick = pool[Math.floor(Math.random() * pool.length)];
-    if (!seen.has(pick.ref)) { seen.add(pick.ref); distractors.push(pick.ref); }
-  }
-  const choices = [correct, ...distractors].sort(() => Math.random() - 0.5);
-
-  els.wordRow.hidden = false;
-  els.pillRow.innerHTML = `
-    <div class="refQuizLabel">Tap the correct reference:</div>
-    ${choices.map(r => `<button class="pill refPill" type="button" data-ref="${escapeHTML(r)}">${escapeHTML(r)}</button>`).join("")}
-  `;
-
-  els.pillRow.querySelectorAll(".refPill").forEach(btn => {
-    btn.addEventListener("click", () => {
-      if (state.locked) return;
-      state.locked = true;
-      const chosen = btn.getAttribute("data-ref") || "";
-      const ok = chosen === correct;
-      btn.classList.add(ok ? "good" : "wrong");
-      if (ok) {
-        els.gameRef.textContent = correct;
-        if (activeKid) {
-          activeKid.xp = Math.max(0, Number(activeKid.xp || 0)) + 5;
-          renderStats();
-          floatXP(5, btn);
-        }
-        els.stepLabel.textContent = "Complete 🎉";
-        setTimeout(() => {
-          onVerseComplete().finally(() => celebrateAndGoHome());
-        }, 600);
-      } else {
-        if (activeKid) {
-          activeKid.xp = Math.max(0, Number(activeKid.xp || 0) - 2);
-          renderStats();
-          floatXP(-2, btn);
-        }
-        setTimeout(() => {
-          btn.classList.remove("wrong");
-          state.locked = false;
-        }, 650);
-      }
-    });
-  });
-}
 
 function renderGame() {
   if (!state) return;
@@ -956,10 +904,9 @@ function renderGame() {
   const expected = nextExpectedIndex();
   if (expected === null) {
     if (state.step >= state.hiddenIdx.length) {
-      if (!state.refQuiz) {
-        state.refQuiz = true;
-        renderRefQuiz();
-      }
+      els.pillRow.innerHTML = "";
+      els.stepLabel.textContent = "Complete 🎉";
+      onVerseComplete().finally(() => celebrateAndGoHome());
       return;
     }
     state.step += 1;
@@ -1363,7 +1310,7 @@ function startGameInternal(verse, mode) {
   els.speakPanel.hidden = true;
   if (els.btnSpeakToggle) els.btnSpeakToggle.textContent = "🎤 Speak it";
 
-  els.gameRef.textContent = verse.ref;
+  els.gameRef.textContent = "";
   els.gameMode.textContent = `Today: ${todayISO()}`;
   setActiveNav(mode === "daily" ? els.navDaily : els.navPick);
   showView("game");
