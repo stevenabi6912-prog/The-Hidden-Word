@@ -41,8 +41,10 @@ body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,
 .bigTitle{font-size:18px;font-weight:900}
 .bigDesc{margin-top:6px;color:var(--muted);font-size:13px;line-height:1.35}
 .hintLine{margin-top:12px;color:var(--muted);font-size:13px}
-.todayCard{border-radius:18px;border:1px solid var(--stroke);background:#ffffffcc;padding:14px;}
+.todayCard{border-radius:18px;border:1px solid var(--stroke);background:#ffffffcc;padding:14px;transition:border-color .3s ease,background .3s ease}
+.todayCard--done{background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.4)}
 .todayTitle{font-size:12px;font-weight:900;color:var(--muted)}
+.todayDoneBadge{display:inline-flex;align-items:center;gap:5px;margin-top:6px;margin-bottom:2px;font-size:12px;font-weight:900;color:#15803d;background:rgba(34,197,94,.15);border-radius:999px;padding:3px 10px}
 .todayRef{margin-top:8px;font-size:16px;font-weight:900}
 .todayText{margin-top:8px;line-height:1.45}
 .health{margin-top:14px;border:1px dashed rgba(0,0,0,.14);border-radius:18px;background:#ffffffad;padding:10px 12px;}

@@ -57,8 +57,10 @@ const els = {
 
   homeDaily: document.getElementById("homeDaily"),
   homePick: document.getElementById("homePick"),
+  todayCard: document.getElementById("todayCard"),
   todayRef: document.getElementById("todayRef"),
   todayText: document.getElementById("todayText"),
+  todayDoneBadge: document.getElementById("todayDoneBadge"),
 
   pickBiblePane: document.getElementById("pickBiblePane"),
   bibleSearch: document.getElementById("bibleSearch"),
@@ -463,6 +465,11 @@ function renderToday() {
   if (!todayVerse) return;
   els.todayRef.textContent = todayVerse.ref;
   els.todayText.textContent = todayVerse.text;
+
+  const todayKey = getVerseKey(todayVerse);
+  const done = completedCache.some(x => x.key === todayKey);
+  if (els.todayDoneBadge) els.todayDoneBadge.hidden = !done;
+  if (els.todayCard) els.todayCard.classList.toggle("todayCard--done", done);
 }
 
 
@@ -1098,7 +1105,10 @@ els.btnMemorizeAll?.addEventListener("click", () => {
   if (!verses.length) return;
   verseQueue = verses.slice();
   verseQueueIdx = 0;
-  requireLoginOrGuest(() => startGameInternal(verseQueue[0], "pick"));
+  requireLoginOrGuest(() => {
+    _queueContinuation = true;
+    startGameInternal(verseQueue[0], "pick");
+  });
 });
 
 function renderGame() {
