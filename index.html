@@ -224,7 +224,10 @@
         <div id="bibleChapters" class="pickList"></div>
       </div>
       <div class="pickCol">
-        <div class="pickColHead"><div class="pickColTitle">Verses</div></div>
+        <div class="pickColHead">
+          <div class="pickColTitle">Verses</div>
+          <button class="memAllBtn" id="btnMemorizeAll" type="button" hidden>📖 Memorize All</button>
+        </div>
         <div id="bibleVerses" class="pickList"></div>
       </div>
     </div>
@@ -251,6 +254,11 @@
       <div class="viewHeader">
         <div>
           <div class="viewTitle">My Verses</div>
+        </div>
+        <div class="sortRow">
+          <span class="sortLabel">Sort:</span>
+          <button class="sortBtn sortBtn--active" id="sortByDate" type="button">📅 Date</button>
+          <button class="sortBtn" id="sortByRef" type="button">🔤 Verse</button>
         </div>
       </div>
       <div class="list" id="myList"></div>

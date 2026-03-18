@@ -66,7 +66,10 @@ const els = {
   bibleChapters: document.getElementById("bibleChapters"),
   bibleVerses: document.getElementById("bibleVerses"),
   bibleHelp: document.getElementById("bibleHelp"),
+  btnMemorizeAll: document.getElementById("btnMemorizeAll"),
   myList: document.getElementById("myList"),
+  sortByDate: document.getElementById("sortByDate"),
+  sortByRef: document.getElementById("sortByRef"),
 
   gameRef: document.getElementById("gameRef"),
   gameMode: document.getElementById("gameMode"),
@@ -186,6 +189,9 @@ let parentDoc = null;      // {displayName}
 let kids = [];             // [{id,name,xp,streak,lastCompleted,badges}]
 let activeKid = null;      // active child doc
 let completedCache = [];   // active child's completed list
+let verseQueue = [];       // multi-verse playlist
+let verseQueueIdx = 0;     // current position in queue
+let myVersesSortOrder = "date"; // "date" | "ref"
 
 let state = null;          // game runtime state
 
@@ -624,6 +630,7 @@ function extractVersesFromChapterJson(chJson){
 
 async function renderBibleVerses(bookid, chapterNr) {
   els.bibleVerses.innerHTML = `<div class="empty">Loading verses…</div>`;
+  if (els.btnMemorizeAll) els.btnMemorizeAll.hidden = true;
   try {
     const verses = await getBibleChapter(bookid, chapterNr);
     const bookName = (bibleState.books || []).find(b => b.bookid === String(bookid))?.name || `Book ${bookid}`;
@@ -631,12 +638,26 @@ async function renderBibleVerses(bookid, chapterNr) {
       els.bibleVerses.innerHTML = `<div class="empty">No verses found.</div>`;
       return;
     }
-    els.bibleVerses.innerHTML = verses.map(v => {
+    const doneRefs = new Set(completedCache.map(x => x.ref));
+    // Build verse objects for queue use
+    const verseObjects = verses.map(v => {
       const vn = (v.verse ?? v.nr ?? v.v ?? "").toString();
       const text = (v.text ?? v.verseText ?? v.t ?? "").toString();
       const ref = `${bookName} ${chapterNr}:${vn}`;
-      return `<button class="verseBtn" type="button" data-ref="${escapeHTML(ref)}" data-text="${escapeHTML(text)}"><span class="vn">${escapeHTML(vn)}</span><span class="vt">${escapeHTML(text)}</span></button>`;
+      return { ref, text };
+    }).filter(v => v.ref && v.text);
+    bibleState.loadedVerses = verseObjects;
+
+    els.bibleVerses.innerHTML = verseObjects.map(v => {
+      const vn = v.ref.split(":")[1] || "";
+      const done = doneRefs.has(v.ref);
+      return `<button class="verseBtn${done ? " verseBtn--done" : ""}" type="button" data-ref="${escapeHTML(v.ref)}" data-text="${escapeHTML(v.text)}">
+        ${done ? `<span class="verseDoneCheck" title="Memorized">✓</span>` : ""}
+        <span class="vn">${escapeHTML(vn)}</span>
+        <span class="vt">${escapeHTML(v.text)}</span>
+      </button>`;
     }).join("");
+
     els.bibleVerses.querySelectorAll(".verseBtn").forEach(btn => {
       btn.addEventListener("click", () => {
         const ref = btn.getAttribute("data-ref") || "";
@@ -645,6 +666,12 @@ async function renderBibleVerses(bookid, chapterNr) {
         requireLoginOrGuest(() => startGame({ ref, text }, "pick"));
       });
     });
+
+    // Show "Memorize All" button
+    if (els.btnMemorizeAll && verseObjects.length > 1) {
+      els.btnMemorizeAll.textContent = `📖 Memorize All (${verseObjects.length})`;
+      els.btnMemorizeAll.hidden = false;
+    }
   } catch (e) {
     console.error(e);
     els.bibleVerses.innerHTML = `<div class="empty">Couldn't load verses.</div>`;
@@ -752,7 +779,14 @@ async function initBiblePicker() {
 }
 
 function renderMyVerses() {
-  const items = completedCache.slice().sort((a,b) => (b.at||"").localeCompare(a.at||""));
+  // Update sort button active state
+  els.sortByDate?.classList.toggle("sortBtn--active", myVersesSortOrder === "date");
+  els.sortByRef?.classList.toggle("sortBtn--active", myVersesSortOrder === "ref");
+
+  const items = completedCache.slice().sort((a, b) => {
+    if (myVersesSortOrder === "ref") return (a.ref || "").localeCompare(b.ref || "");
+    return (b.at || "").localeCompare(a.at || "");
+  });
   if (!items.length) {
     els.myList.innerHTML = `<div class="empty">No completed verses yet. Finish a verse and it will show up here.</div>`;
     return;
@@ -777,6 +811,9 @@ function renderMyVerses() {
     });
   });
 }
+
+els.sortByDate?.addEventListener("click", () => { myVersesSortOrder = "date"; renderMyVerses(); });
+els.sortByRef?.addEventListener("click",  () => { myVersesSortOrder = "ref";  renderMyVerses(); });
 
 /* GAME LOGIC (unchanged from v5) */
 function initState(verse, mode) {
@@ -895,18 +932,33 @@ function buildPills() {
   return { correctWord, correctIdx, pills: arr };
 }
 function celebrateAndGoHome() {
+  const inQueue = verseQueue.length > 0;
+  const nextIdx = verseQueueIdx + 1;
+  const hasNext = inQueue && nextIdx < verseQueue.length;
+  const queueProgress = inQueue
+    ? `Verse ${verseQueueIdx + 1} of ${verseQueue.length}` : "";
+
   const overlay = document.createElement("div");
   overlay.className = "celebrateOverlay";
   overlay.innerHTML = `
     <div class="celebrateCard">
-      <div class="celebrateSparkle">✨</div>
+      <div class="celebrateSparkle">${hasNext ? "🔥" : "✨"}</div>
       <div class="celebrateTitle">Great job!</div>
-      <div class="celebrateSub">Verse complete.</div>
+      <div class="celebrateSub">${hasNext ? queueProgress + " — up next!" : "Verse complete."}</div>
+      ${hasNext ? `<div class="celebrateProgress"><div class="celebrateBar" style="width:${Math.round(((verseQueueIdx+1)/verseQueue.length)*100)}%"></div></div>` : ""}
     </div>
   `;
   document.body.appendChild(overlay);
   setTimeout(() => {
     overlay.remove();
+    if (hasNext) {
+      verseQueueIdx = nextIdx;
+      startGameInternal(verseQueue[verseQueueIdx], "pick");
+      return;
+    }
+    // Queue finished or no queue
+    verseQueue = [];
+    verseQueueIdx = 0;
     if (!auth?.currentUser && !guestAllowed) {
       setActiveNav(els.navProfile);
       showView("profile");
@@ -917,8 +969,17 @@ function celebrateAndGoHome() {
     }
     renderStats();
     renderToday();
-  }, 1200);
+  }, 1400);
 }
+
+// Wire "Memorize All" button
+els.btnMemorizeAll?.addEventListener("click", () => {
+  const verses = bibleState.loadedVerses || [];
+  if (!verses.length) return;
+  verseQueue = verses.slice();
+  verseQueueIdx = 0;
+  requireLoginOrGuest(() => startGameInternal(verseQueue[0], "pick"));
+});
 
 function renderGame() {
   if (!state) return;
@@ -1336,7 +1397,9 @@ function startGameInternal(verse, mode) {
   if (els.btnSpeakToggle) els.btnSpeakToggle.textContent = "🎤 Speak it";
 
   els.gameRef.textContent = "";
-  els.gameMode.textContent = `Today: ${todayISO()}`;
+  els.gameMode.textContent = verseQueue.length > 0
+    ? `Verse ${verseQueueIdx + 1} of ${verseQueue.length}`
+    : `Today: ${todayISO()}`;
   setActiveNav(mode === "daily" ? els.navDaily : els.navPick);
   showView("game");
   renderStats();
