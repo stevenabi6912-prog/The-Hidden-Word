@@ -327,6 +327,7 @@ input,textarea,select{font-size:16px}
 
 /* Ensure [hidden] works for modal overlays */
 .modalOverlay[hidden],.speakPanel[hidden],.speakBtns[hidden]{display:none !important;}
+.dailyDonePill[hidden],.todayDoneBadge[hidden]{display:none !important;}
 
 /* Verse modal */
 .verseModalCard{max-width:600px}
