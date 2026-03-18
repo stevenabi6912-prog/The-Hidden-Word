@@ -112,6 +112,28 @@ input,textarea,select{font-size:16px}
 .celebrateSub{color:rgba(13,19,33,.65);margin-top:4px;font-weight:700;}
 .celebrateProgress{margin-top:12px;height:6px;border-radius:999px;background:rgba(0,0,0,.08);overflow:hidden}
 .celebrateBar{height:100%;border-radius:999px;background:linear-gradient(90deg,#7c3aed,#38bdf8);transition:width .4s ease}
+
+/* ── Chapter Complete card ────────────────────────────────────────── */
+.chapterCompleteCard{
+  background:linear-gradient(145deg,#1a0533,#0c1f40);
+  border:1.5px solid rgba(255,255,255,.12);border-radius:28px;
+  padding:40px 32px 32px;text-align:center;max-width:360px;width:90%;
+  box-shadow:0 50px 120px rgba(0,0,0,.6),0 0 0 1px rgba(124,58,237,.25);
+  animation:badgeCardIn .5s cubic-bezier(.34,1.56,.64,1) both;
+}
+.chapterCompleteIcon{font-size:60px;margin-bottom:10px;animation:badgeIconPulse 2s ease infinite}
+.chapterCompleteTitle{font-size:26px;font-weight:900;color:#fff;margin-bottom:6px}
+.chapterCompleteChapter{
+  font-size:15px;font-weight:900;letter-spacing:.06em;
+  color:#a78bfa;margin-bottom:14px;text-transform:uppercase;
+}
+.chapterCompleteSub{font-size:14px;color:rgba(255,255,255,.6);line-height:1.6;margin-bottom:26px}
+.chapterCompleteBtns{display:flex;flex-direction:column;gap:10px}
+.chapterTryBtn{font-size:16px !important;padding:14px 28px !important;
+  background:linear-gradient(135deg,#7c3aed,#38bdf8) !important;
+  box-shadow:0 8px 28px rgba(124,58,237,.5) !important}
+.chapterDoneBtn{color:rgba(255,255,255,.7) !important;border-color:rgba(255,255,255,.15) !important;background:transparent !important}
+
 @keyframes thwPop{
   0%{transform:translateY(8px) scale(.96);opacity:0;}
   100%{transform:translateY(0) scale(1);opacity:1;}

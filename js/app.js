@@ -191,6 +191,7 @@ let activeKid = null;      // active child doc
 let completedCache = [];   // active child's completed list
 let verseQueue = [];       // multi-verse playlist
 let verseQueueIdx = 0;     // current position in queue
+let _queueContinuation = false; // true only when celebrateAndGoHome advances the queue
 let myVersesSortOrder = "date"; // "date" | "ref"
 
 let state = null;          // game runtime state
@@ -224,6 +225,8 @@ const BADGES = [
   { id: "streak30",  icon: "🌟", label: "Monthly Disciple",   desc: "Reach a 30‑day streak" },
   { id: "streak60",  icon: "💎", label: "Diamond Dedication", desc: "Reach a 60‑day streak" },
   { id: "streak100", icon: "🏅", label: "Century of Grace",   desc: "Reach a 100‑day streak" },
+  // Chapter mastery
+  { id: "chapter1",  icon: "📜", label: "Chapter Master",     desc: "Memorize a complete chapter" },
   // Books & testament
   { id: "ot",        icon: "📜", label: "Ancient Paths",      desc: "Complete an Old Testament verse" },
   { id: "nt",        icon: "✝️", label: "New Covenant",       desc: "Complete a New Testament verse" },
@@ -239,6 +242,37 @@ const NT_BOOKS = new Set(["Matthew","Mark","Luke","John","Acts","Romans",
   "Titus","Philemon","Hebrews","James","1 Peter","2 Peter",
   "1 John","2 John","3 John","Jude","Revelation"
 ]);
+
+// Canonical Bible book order (Genesis = 0 … Revelation = 65)
+const BIBLE_ORDER = new Map([
+  "Genesis","Exodus","Leviticus","Numbers","Deuteronomy",
+  "Joshua","Judges","Ruth","1 Samuel","2 Samuel",
+  "1 Kings","2 Kings","1 Chronicles","2 Chronicles","Ezra",
+  "Nehemiah","Esther","Job","Psalms","Proverbs",
+  "Ecclesiastes","Song of Solomon","Isaiah","Jeremiah","Lamentations",
+  "Ezekiel","Daniel","Hosea","Joel","Amos",
+  "Obadiah","Jonah","Micah","Nahum","Habakkuk",
+  "Zephaniah","Haggai","Zechariah","Malachi",
+  "Matthew","Mark","Luke","John","Acts",
+  "Romans","1 Corinthians","2 Corinthians","Galatians","Ephesians",
+  "Philippians","Colossians","1 Thessalonians","2 Thessalonians","1 Timothy",
+  "2 Timothy","Titus","Philemon","Hebrews","James",
+  "1 Peter","2 Peter","1 John","2 John","3 John",
+  "Jude","Revelation",
+].map((name, i) => [name, i]));
+// Common aliases
+BIBLE_ORDER.set("Psalm", BIBLE_ORDER.get("Psalms"));
+BIBLE_ORDER.set("Song of Songs", BIBLE_ORDER.get("Song of Solomon"));
+
+function parseVerseRef(ref) {
+  const m = (ref || "").match(/^(.+?)\s+(\d+):(\d+)/);
+  if (!m) return { order: 999, ch: 0, v: 0 };
+  return {
+    order: BIBLE_ORDER.get(m[1].trim()) ?? 999,
+    ch: Number(m[2]),
+    v: Number(m[3]),
+  };
+}
 
 
   // Active profile helpers (parent or child id). Stored in LS_ACTIVE_KID.
@@ -784,7 +818,10 @@ function renderMyVerses() {
   els.sortByRef?.classList.toggle("sortBtn--active", myVersesSortOrder === "ref");
 
   const items = completedCache.slice().sort((a, b) => {
-    if (myVersesSortOrder === "ref") return (a.ref || "").localeCompare(b.ref || "");
+    if (myVersesSortOrder === "ref") {
+      const pa = parseVerseRef(a.ref), pb = parseVerseRef(b.ref);
+      return pa.order - pb.order || pa.ch - pb.ch || pa.v - pb.v;
+    }
     return (b.at || "").localeCompare(a.at || "");
   });
   if (!items.length) {
@@ -931,45 +968,128 @@ function buildPills() {
   }
   return { correctWord, correctIdx, pills: arr };
 }
+function goHome() {
+  if (!auth?.currentUser && !guestAllowed) {
+    setActiveNav(els.navProfile);
+    showView("profile");
+    renderProfile();
+  } else {
+    setActiveNav(els.navHome);
+    showView("home");
+  }
+  renderStats();
+  renderToday();
+}
+
 function celebrateAndGoHome() {
   const inQueue = verseQueue.length > 0;
   const nextIdx = verseQueueIdx + 1;
   const hasNext = inQueue && nextIdx < verseQueue.length;
-  const queueProgress = inQueue
-    ? `Verse ${verseQueueIdx + 1} of ${verseQueue.length}` : "";
+  const chapterFinished = inQueue && !hasNext && verseQueue.length > 1;
 
   const overlay = document.createElement("div");
   overlay.className = "celebrateOverlay";
-  overlay.innerHTML = `
-    <div class="celebrateCard">
-      <div class="celebrateSparkle">${hasNext ? "🔥" : "✨"}</div>
-      <div class="celebrateTitle">Great job!</div>
-      <div class="celebrateSub">${hasNext ? queueProgress + " — up next!" : "Verse complete."}</div>
-      ${hasNext ? `<div class="celebrateProgress"><div class="celebrateBar" style="width:${Math.round(((verseQueueIdx+1)/verseQueue.length)*100)}%"></div></div>` : ""}
-    </div>
-  `;
-  document.body.appendChild(overlay);
-  setTimeout(() => {
-    overlay.remove();
-    if (hasNext) {
+
+  if (hasNext) {
+    // Mid-queue: quick card, then auto-advance
+    const pct = Math.round(((verseQueueIdx + 1) / verseQueue.length) * 100);
+    overlay.innerHTML = `
+      <div class="celebrateCard">
+        <div class="celebrateSparkle">🔥</div>
+        <div class="celebrateTitle">Great job!</div>
+        <div class="celebrateSub">Verse ${verseQueueIdx + 1} of ${verseQueue.length} — up next!</div>
+        <div class="celebrateProgress"><div class="celebrateBar" style="width:${pct}%"></div></div>
+      </div>`;
+    document.body.appendChild(overlay);
+    setTimeout(() => {
+      overlay.remove();
       verseQueueIdx = nextIdx;
+      _queueContinuation = true;
       startGameInternal(verseQueue[verseQueueIdx], "pick");
-      return;
+    }, 1400);
+    return;
+  }
+
+  if (chapterFinished) {
+    // All verses done — show chapter complete screen
+    const completedQueue = verseQueue.slice();
+    const chapterKey = verseQueue[0].ref.replace(/\s*:\s*\d+\s*$/, "").trim();
+
+    // Award chapter badge
+    if (activeKid) {
+      if (!activeKid.completedChapters) activeKid.completedChapters = [];
+      if (!activeKid.completedChapters.includes(chapterKey)) {
+        activeKid.completedChapters.push(chapterKey);
+      }
+      const badgesBefore = new Set(Object.keys(activeKid.badges || {}));
+      awardBadgesForKid(activeKid);
+      const newBadges = BADGES.filter(b => activeKid.badges[b.id] && !badgesBefore.has(b.id));
+      saveActiveKidDoc();
+      if (newBadges.length) setTimeout(() => showBadgePopups(newBadges), 2200);
     }
-    // Queue finished or no queue
+
     verseQueue = [];
     verseQueueIdx = 0;
-    if (!auth?.currentUser && !guestAllowed) {
-      setActiveNav(els.navProfile);
-      showView("profile");
-      renderProfile();
-    } else {
-      setActiveNav(els.navHome);
-      showView("home");
-    }
+
+    overlay.innerHTML = `
+      <div class="chapterCompleteCard">
+        <div class="chapterCompleteIcon">🎉</div>
+        <div class="chapterCompleteTitle">Chapter Complete!</div>
+        <div class="chapterCompleteChapter">${escapeHTML(chapterKey)}</div>
+        <div class="chapterCompleteSub">You've memorized every verse.<br>Ready to say the whole thing?</div>
+        <div class="chapterCompleteBtns">
+          <button class="primary chapterTryBtn" type="button">🎙️ Recite Full Chapter</button>
+          <button class="soft chapterDoneBtn" type="button">✓ I'm Done</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector(".chapterTryBtn").addEventListener("click", () => {
+      overlay.remove();
+      startChapterChallenge(completedQueue);
+    });
+    overlay.querySelector(".chapterDoneBtn").addEventListener("click", () => {
+      overlay.remove();
+      goHome();
+    });
+    return;
+  }
+
+  // Normal single-verse complete
+  verseQueue = [];
+  verseQueueIdx = 0;
+  overlay.innerHTML = `
+    <div class="celebrateCard">
+      <div class="celebrateSparkle">✨</div>
+      <div class="celebrateTitle">Great job!</div>
+      <div class="celebrateSub">Verse complete.</div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => { overlay.remove(); goHome(); }, 1200);
+}
+
+function startChapterChallenge(verses) {
+  const combinedText = verses.map(v => v.text).join(" ");
+  const chapterKey = verses[0].ref.replace(/\s*:\s*\d+\s*$/, "").trim();
+  const verse = { ref: chapterKey + " (Full Chapter)", text: combinedText };
+  // Show the full text in the modal, then auto-enter speak mode
+  showVerseModal(verse, () => {
+    state = initState(verse, "pick");
+    speechMode = false;
+    stopListening();
+    els.tapControls.hidden = false;
+    els.wordRow.hidden = false;
+    els.speakPanel.hidden = true;
+    if (els.btnSpeakToggle) els.btnSpeakToggle.textContent = "🎤 Speak it";
+    els.gameRef.textContent = "";
+    els.gameMode.textContent = `Full Chapter`;
+    setActiveNav(els.navPick);
+    showView("game");
     renderStats();
-    renderToday();
-  }, 1400);
+    renderGame();
+    // Auto-enter speech mode so they recite rather than tap 100+ words
+    setTimeout(() => enterSpeechMode(), 300);
+  });
 }
 
 // Wire "Memorize All" button
@@ -1387,6 +1507,13 @@ els.btnShowVerse?.addEventListener("click", () => {
 /* ── End verse modal ──────────────────────────────────────────────── */
 
 function startGameInternal(verse, mode) {
+  // Clear any leftover queue unless this call is an intentional queue advancement
+  if (!_queueContinuation) {
+    verseQueue = [];
+    verseQueueIdx = 0;
+  }
+  _queueContinuation = false;
+
   state = initState(verse, mode);
   // Reset speech mode on every new game
   speechMode = false;
@@ -1416,7 +1543,7 @@ function freshDailyStart(verse) { startGame(verse, "daily"); }
 
 /* FAMILY DATA */
 function emptyKid(name="Child") {
-  return { id: "local", name, xp: 0, streak: 0, lastCompleted: null, badges: {} };
+  return { id: "local", name, xp: 0, streak: 0, lastCompleted: null, badges: {}, completedChapters: [] };
 }
 function computeStreakNext(current, lastCompleted, dateStr) {
   if (lastCompleted === dateStr) return current;
@@ -1460,6 +1587,9 @@ function awardBadgesForKid(kid) {
   }
   if (gospels.every(g => books.has(g))) badges.gospels = true;
   if (books.size >= 10) badges.bookworm = true;
+
+  // Chapter mastery
+  if ((kid.completedChapters || []).length >= 1) badges.chapter1 = true;
 
   kid.badges = badges;
 }
@@ -1813,6 +1943,7 @@ async function saveActiveKidDoc() {
     streak: activeKid.streak,
     lastCompleted: activeKid.lastCompleted,
     badges: activeKid.badges || {},
+    completedChapters: activeKid.completedChapters || [],
     updatedAt: serverTimestamp(),
   }, { merge: true });
 
