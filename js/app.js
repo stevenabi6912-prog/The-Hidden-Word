@@ -468,7 +468,8 @@ function renderToday() {
   els.todayText.textContent = todayVerse.text;
 
   const todayKey = getVerseKey(todayVerse);
-  const done = completedCache.some(x => x.key === todayKey);
+  const todayDate = todayISO();
+  const done = completedCache.some(x => x.key === todayKey && x.at && x.at.startsWith(todayDate));
   if (els.todayDoneBadge) els.todayDoneBadge.hidden = !done;
   if (els.todayCard) els.todayCard.classList.toggle("todayCard--done", done);
   const homeDaily = document.getElementById("homeDaily");
