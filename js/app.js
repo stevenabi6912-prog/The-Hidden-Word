@@ -468,6 +468,7 @@ function renderToday() {
   els.todayText.textContent = todayVerse.text;
 
   const done = !!(activeKid?.lastDailyCompleted && activeKid.lastDailyCompleted === todayISO());
+  console.log("[renderToday] activeKid:", activeKid?.id, "lastDailyCompleted:", activeKid?.lastDailyCompleted, "todayISO:", todayISO(), "done:", done);
   if (els.todayDoneBadge) els.todayDoneBadge.hidden = !done;
   if (els.todayCard) els.todayCard.classList.toggle("todayCard--done", done);
   const homeDaily = document.getElementById("homeDaily");
