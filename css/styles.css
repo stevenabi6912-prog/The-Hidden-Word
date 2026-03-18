@@ -37,7 +37,9 @@ body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,
 .bigCard{text-align:left;border:1px solid var(--stroke);border-radius:18px;padding:14px 14px;cursor:pointer;box-shadow:0 14px 30px rgba(0,0,0,.10);transition:transform .08s ease,box-shadow .08s ease;}
 .bigCard:active{transform:translateY(1px)}
 .bigCard--daily{background:linear-gradient(135deg,#f3e8ff,#ffe4f1)}
+.bigCard--daily.bigCard--done{background:linear-gradient(135deg,#d1fae5,#a7f3d0);border-color:#6ee7b7;}
 .bigCard--pick{background:linear-gradient(135deg,#e0f2fe,#ede9fe)}
+.dailyDonePill{display:inline-block;margin-top:7px;background:#059669;color:#fff;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.3px;}
 .bigTitle{font-size:18px;font-weight:900}
 .bigDesc{margin-top:6px;color:var(--muted);font-size:13px;line-height:1.35}
 .hintLine{margin-top:12px;color:var(--muted);font-size:13px}

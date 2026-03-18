@@ -471,6 +471,10 @@ function renderToday() {
   const done = completedCache.some(x => x.key === todayKey);
   if (els.todayDoneBadge) els.todayDoneBadge.hidden = !done;
   if (els.todayCard) els.todayCard.classList.toggle("todayCard--done", done);
+  const homeDaily = document.getElementById("homeDaily");
+  const dailyDonePill = document.getElementById("dailyDonePill");
+  if (homeDaily) homeDaily.classList.toggle("bigCard--done", done);
+  if (dailyDonePill) dailyDonePill.hidden = !done;
 }
 
 
