@@ -832,7 +832,13 @@ function renderMyVerses() {
   els.sortByDate?.classList.toggle("sortBtn--active", myVersesSortOrder === "date");
   els.sortByRef?.classList.toggle("sortBtn--active", myVersesSortOrder === "ref");
 
-  const items = completedCache.slice().sort((a, b) => {
+  // Deduplicate by ref — keep the most recent entry per verse reference
+  const seenRefs = new Map();
+  completedCache.forEach(v => {
+    const existing = seenRefs.get(v.ref);
+    if (!existing || (v.at || "") > (existing.at || "")) seenRefs.set(v.ref, v);
+  });
+  const items = Array.from(seenRefs.values()).sort((a, b) => {
     if (myVersesSortOrder === "ref") {
       const pa = parseVerseRef(a.ref), pb = parseVerseRef(b.ref);
       return pa.order - pb.order || pa.ch - pb.ch || pa.v - pb.v;
