@@ -69,6 +69,7 @@ const els = {
   bibleVerses: document.getElementById("bibleVerses"),
   bibleHelp: document.getElementById("bibleHelp"),
   btnMemorizeAll: document.getElementById("btnMemorizeAll"),
+  btnReciteChapter: document.getElementById("btnReciteChapter"),
   myList: document.getElementById("myList"),
   sortByDate: document.getElementById("sortByDate"),
   sortByRef: document.getElementById("sortByRef"),
@@ -672,6 +673,7 @@ function extractVersesFromChapterJson(chJson){
 async function renderBibleVerses(bookid, chapterNr) {
   els.bibleVerses.innerHTML = `<div class="empty">Loading verses…</div>`;
   if (els.btnMemorizeAll) els.btnMemorizeAll.hidden = true;
+  if (els.btnReciteChapter) els.btnReciteChapter.hidden = true;
   try {
     const verses = await getBibleChapter(bookid, chapterNr);
     const bookName = (bibleState.books || []).find(b => b.bookid === String(bookid))?.name || `Book ${bookid}`;
@@ -708,10 +710,13 @@ async function renderBibleVerses(bookid, chapterNr) {
       });
     });
 
-    // Show "Memorize All" button
-    if (els.btnMemorizeAll && verseObjects.length > 1) {
-      els.btnMemorizeAll.textContent = `📖 Memorize All (${verseObjects.length})`;
-      els.btnMemorizeAll.hidden = false;
+    // Show "Memorize All" and "Recite Chapter" buttons
+    if (verseObjects.length > 1) {
+      if (els.btnMemorizeAll) {
+        els.btnMemorizeAll.textContent = `📖 Memorize All (${verseObjects.length})`;
+        els.btnMemorizeAll.hidden = false;
+      }
+      if (els.btnReciteChapter) els.btnReciteChapter.hidden = false;
     }
   } catch (e) {
     console.error(e);
@@ -1109,6 +1114,12 @@ els.btnMemorizeAll?.addEventListener("click", () => {
     _queueContinuation = true;
     startGameInternal(verseQueue[0], "pick");
   });
+});
+
+els.btnReciteChapter?.addEventListener("click", () => {
+  const verses = bibleState.loadedVerses || [];
+  if (!verses.length) return;
+  requireLoginOrGuest(() => startChapterChallenge(verses));
 });
 
 function renderGame() {

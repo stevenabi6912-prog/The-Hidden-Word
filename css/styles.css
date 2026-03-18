@@ -401,8 +401,11 @@ input,textarea,select{font-size:16px}
 .pickCol{border:1px solid rgba(0,0,0,.08);border-radius:16px;background:rgba(255,255,255,.75);overflow:hidden;min-height:280px;display:flex;flex-direction:column}
 .pickColHead{padding:10px 12px;border-bottom:1px solid rgba(0,0,0,.06);background:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:space-between;gap:8px}
 .pickColTitle{font-weight:700;color:#444}
+.pickColBtns{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
 .memAllBtn{border:none;border-radius:999px;background:linear-gradient(135deg,#7c3aed,#38bdf8);color:#fff;font-size:11px;font-weight:900;padding:5px 11px;cursor:pointer;white-space:nowrap;box-shadow:0 4px 12px rgba(124,58,237,.3);transition:transform .1s,box-shadow .1s}
 .memAllBtn:hover{transform:scale(1.05);box-shadow:0 6px 18px rgba(124,58,237,.45)}
+.reciteBtn{background:linear-gradient(135deg,#059669,#10b981) !important;box-shadow:0 4px 12px rgba(5,150,105,.3) !important}
+.reciteBtn:hover{box-shadow:0 6px 18px rgba(5,150,105,.45) !important}
 .pickList{padding:8px;overflow:auto;flex:1}
 
 /* ── Bible book buttons ─────────────────────────────────────────── */
