@@ -467,9 +467,7 @@ function renderToday() {
   els.todayRef.textContent = todayVerse.ref;
   els.todayText.textContent = todayVerse.text;
 
-  const todayKey = getVerseKey(todayVerse);
-  const todayDate = todayISO();
-  const done = completedCache.some(x => x.key === todayKey && x.at && x.at.startsWith(todayDate));
+  const done = !!(activeKid?.lastDailyCompleted && activeKid.lastDailyCompleted === todayISO());
   if (els.todayDoneBadge) els.todayDoneBadge.hidden = !done;
   if (els.todayCard) els.todayCard.classList.toggle("todayCard--done", done);
   const homeDaily = document.getElementById("homeDaily");
@@ -1569,7 +1567,7 @@ function freshDailyStart(verse) { startGame(verse, "daily"); }
 
 /* FAMILY DATA */
 function emptyKid(name="Child") {
-  return { id: "local", name, xp: 0, streak: 0, lastCompleted: null, badges: {}, completedChapters: [] };
+  return { id: "local", name, xp: 0, streak: 0, lastCompleted: null, lastDailyCompleted: null, badges: {}, completedChapters: [] };
 }
 function computeStreakNext(current, lastCompleted, dateStr) {
   if (lastCompleted === dateStr) return current;
@@ -1775,6 +1773,7 @@ async function ensureParentDoc() {
       xp: Number.isFinite(+d.xp) ? +d.xp : 0,
       streak: Number.isFinite(+d.streak) ? +d.streak : 0,
       lastCompleted: typeof d.lastCompleted === "string" ? d.lastCompleted : null,
+      lastDailyCompleted: typeof d.lastDailyCompleted === "string" ? d.lastDailyCompleted : null,
       badges: (d.badges && typeof d.badges === "object") ? d.badges : {},
     };
   }
@@ -1794,6 +1793,7 @@ async function listKids() {
       xp: Number.isFinite(+d.xp) ? +d.xp : 0,
       streak: Number.isFinite(+d.streak) ? +d.streak : 0,
       lastCompleted: typeof d.lastCompleted === "string" ? d.lastCompleted : null,
+      lastDailyCompleted: typeof d.lastDailyCompleted === "string" ? d.lastDailyCompleted : null,
       badges: (d.badges && typeof d.badges === "object") ? d.badges : {}
     });
   });
@@ -1849,6 +1849,7 @@ function makeParentProfile() {
     xp: parentDoc?.xp ?? 0,
     streak: parentDoc?.streak ?? 0,
     lastCompleted: parentDoc?.lastCompleted ?? null,
+    lastDailyCompleted: parentDoc?.lastDailyCompleted ?? null,
     badges: parentDoc?.badges ?? {},
   };
 }
@@ -1877,6 +1878,7 @@ async function setActiveKidById(kidId) {
     xp: Number.isFinite(+d.xp) ? +d.xp : 0,
     streak: Number.isFinite(+d.streak) ? +d.streak : 0,
     lastCompleted: typeof d.lastCompleted === "string" ? d.lastCompleted : null,
+    lastDailyCompleted: typeof d.lastDailyCompleted === "string" ? d.lastDailyCompleted : null,
     badges: (d.badges && typeof d.badges === "object") ? d.badges : {},
   };
   // Keep local cache in sync
@@ -1943,6 +1945,7 @@ function activeProfileDocData() {
     xp: activeKid.xp ?? 0,
     streak: activeKid.streak ?? 0,
     lastCompleted: activeKid.lastCompleted ?? null,
+    lastDailyCompleted: activeKid.lastDailyCompleted ?? null,
     badges: activeKid.badges || {},
   };
 }
@@ -1968,6 +1971,7 @@ async function saveActiveKidDoc() {
     xp: activeKid.xp,
     streak: activeKid.streak,
     lastCompleted: activeKid.lastCompleted,
+    lastDailyCompleted: activeKid.lastDailyCompleted ?? null,
     badges: activeKid.badges || {},
     completedChapters: activeKid.completedChapters || [],
     updatedAt: serverTimestamp(),
@@ -2040,6 +2044,7 @@ async function onVerseComplete() {
   const already = activeKid.lastCompleted === today;
   activeKid.streak = computeStreakNext(activeKid.streak || 0, activeKid.lastCompleted, today);
   activeKid.lastCompleted = today;
+  if (state.mode === "daily") activeKid.lastDailyCompleted = today;
   const bonusXP = already ? 10 : 50;
 
   activeKid.xp = (activeKid.xp || 0) + bonusXP;
